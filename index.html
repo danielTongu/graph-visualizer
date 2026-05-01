@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/html">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Graph Visualizer</title>
+    <link rel="stylesheet" href="./index.css"/>
+</head>
+<body>
+<div id="app" class="hide-scrollbar">
+    <header>
+        <h1>Graph Visualizer</h1>
+        <ul>
+            <li>visual editing</li>
+            <li>weighted/directed edges</li>
+            <li>animated traversal</li>
+            <li>manual step traversal</li>
+            <li>pan/zoom</li>
+            <li>local saves</li>
+            <li>undo/redo</li>
+        </ul>
+    </header>
+    <main>
+        <aside class="hide-scrollbar">
+            <dl id="compose">
+                <dt>Compose</dt>
+                <dd>
+                    <div id="edge-toggles">
+                        <label>Directed?<input id="directed-toggle" type="checkbox"></label>
+                        <label>Weighted?<input id="weighted-toggle" type="checkbox"></label>
+                    </div>
+                    <label>
+                        Edit Mode
+                        <select id="mode-select">
+                            <option value="add-node">Add Node</option>
+                            <option value="add-edge">Add Edge</option>
+                            <option value="edit">Edit</option>
+                            <option value="move">Move</option>
+                            <option value="delete">Delete</option>
+                        </select>
+                    </label>
+                </dd>
+                <dd id="mode-panel">
+                    <section id="panel-add-node">
+                        <label>
+                            Node Label Style:
+                            <select id="node-label-mode-select">
+                                <option value="numeric">Numeric: 1, 2, 3</option>
+                                <option value="alphabetic">Alphabetic: A, B, C</option>
+                            </select>
+                        </label>
+                        <label>
+                            Node Radius (Default):
+                            <input id="default-node-radius-input" type="number" min="1" step="1" value="20">
+                        </label>
+                        <small class="help">Click anywhere on the canvas to add a node.</small>
+                    </section>
+                    <section id="panel-add-edge" hidden>
+                        <label id="edge-weight-row" hidden>Edge Weight:<input id="edge-weight-input" type="number" step="any" value="1"></label>
+                        <small>Click a source node, then a destination node.</small>
+                    </section>
+                    <section id="panel-edit" hidden>
+                        <small id="edit-empty-help">Click a node or edge on the canvas to edit it.</small>
+                        <div id="node-edit-controls" hidden>
+                            <label>Node Label:<input id="edit-node-label-input" type="text"></label>
+                            <label>Node Radius:<input id="edit-node-radius-input" type="number" min="1" step="1"></label>
+                        </div>
+                        <div id="edge-edit-controls" hidden>
+                            <label id="edit-edge-weight-row">Edge Weight:<input id="edit-edge-weight-input" type="number" step="any"></label>
+                            <small id="edge-unweighted-help" hidden>Weighted mode is off, weight fixed at 1.</small>
+                        </div>
+                        <div id="edit-buttons" class="button-group" hidden>
+                            <button id="apply-edit-btn" class="success">Apply</button>
+                            <button id="clear-edit-selection-btn" class="primary">Cancel</button>
+                        </div>
+                    </section>
+                    <small id="panel-move" hidden>* Drag node to move.<br>* Alt+drag or middle-drag to pan.<br>* Wheel to zoom.</small>
+                    <small id="panel-delete" hidden>Click node or edge to delete.</small>
+                </dd>
+                <dd class="button-group">
+                    <button id="sample-graph-btn">Load Sample Graph</button>
+                </dd>
+                <dd class="button-group">
+                    <button id="clear-graph-btn" class="danger" title="clear">C</button>
+                    <button id="save-local-btn" class="success" title="memorize">M+</button>
+                    <button id="load-local-btn" class="warn" title="remember">MR</button>
+                </dd>
+            </dl>
+            <dl id="traverse">
+                <dt>Traverse</dt>
+                <dd>
+                    <label>
+                        Algorithm:
+                        <select id="algorithm-select">
+                            <option value="dfs">DFS</option>
+                            <option value="bfs">BFS</option>
+                            <option value="prim">MST (Prim)</option>
+                            <option value="dijkstra">Path (Dijkstra)</option>
+                            <option value="bellman-ford">Path (Bellman-Ford)</option>
+                        </select>
+                    </label>
+                    <label>Start:<select id="start-node-select"></select></label>
+                    <label>End (optional):<select id="end-node-select"></select></label>
+                    <label>Delay (ms):<input id="delay-input" type="number" min="50" step="50" value="500"></label>
+                    <div class="button-group">
+                        <button id="step-traversal-btn" class="primary" title="step">⏭</button>
+                        <button id="run-traversal-btn" class="primary" title="play">▶</button>
+                        <button id="stop-traversal-btn" class="primary" title="stop">⏹</button>
+                        <button id="clear-traversal-btn" class="danger" title="clear">C</button>
+                    </div>
+                    <div id="traversal-output" title="Traversal output will appear here."></div>
+                </dd>
+            </dl>
+            <dl id="transport">
+                <dt>Transport</dt>
+                <dd>
+                    <div class="button-group">
+                        <button id="export-btn">Export JSON</button>
+                        <button id="import-btn">Import JSON</button>
+                    </div>
+                    <textarea id="json-area" placeholder="Graph JSON will appear here for export, or paste JSON here to import."></textarea>
+                </dd>
+            </dl>
+            <nav>
+                <button type="button" data-target="compose"></button>
+                <button type="button" data-target="traverse"></button>
+                <button type="button" data-target="transport"></button>
+            </nav>
+        </aside>
+        <section id="graph-editor">
+            <header>
+                <label>&#9998;<span id="mode-pill"></span></label>
+                <span id="legend" class="hide-scrollbar">
+                    <label data-text="Node"><span></span></label>
+                    <label data-text="Selected"><span></span></label>
+                    <label data-text="Active"><span></span></label>
+                    <label data-text="Visited"><span></span></label>
+                    <label data-text="Path/MST"><span></span></label>
+                </span>
+            </header>
+            <canvas></canvas>
+            <footer id="graph-status">status</footer>
+        </section>
+    </main>
+    <footer>
+        <section><span id="copyright-year"></span>Daniel Tongu</section>
+        <section>
+            <a href="https://linkedin.com/in/danielTongu">LinkedIn</a>
+            <a href="https://github.com/danielTongu">GitHub</a>
+            <a href="https://www.discord.com/">Discord</a>
+        </section>
+        <a href="#">Back to top ↑</a>
+    </footer>
+</div>
+<script src="./index.js"></script>
+</body>
+</html>
