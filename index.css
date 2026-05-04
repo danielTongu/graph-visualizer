@@ -70,13 +70,14 @@ body {
     padding: var(--space-2xl);
 
     > header {
-        border-left: 4px solid var(--white);
-        padding-left: var(--space-md);
-
+        :not(h1) {
+            font-size: medium;
+        }
         ul {
             &:after {
                 content:"";
                 display:block;
+                clear:both;
             }
             > li {
                 float:left;
