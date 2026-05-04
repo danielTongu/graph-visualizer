@@ -2,22 +2,40 @@
 <html lang="en" xmlns="http://www.w3.org/1999/html">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Graph Visualizer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- SEO basics -->
+    <title>Graph Visualizer - Interactive BFS, DFS, Dijkstra, Prim, Bellman-Ford Tool</title>
+    <meta name="description" content="Interactive graph visualizer for creating, editing, and animating BFS, DFS, Prim, Dijkstra, and Bellman-Ford graph algorithms.">
+    <meta name="robots" content="index, follow">
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://danieltongu.github.io/graph-visualizer/">
+
+    <!-- Open Graph (for sharing previews) -->
+    <meta property="og:title" content="Graph Visualizer">
+    <meta property="og:description" content="Create, edit, save, and animate graph algorithms visually in the browser.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://danieltongu.github.io/graph-visualizer/">
+
     <link rel="stylesheet" href="./index.css"/>
 </head>
 <body>
 <div id="app" class="hide-scrollbar">
     <header>
-        <h1>Graph Visualizer</h1>
+        <h1>Interactive Graph Algorithm Visualizer</h1>
+        <p>
+            Build, edit, and visualize graphs in the browser with features including:
+        </p>
         <ul>
-            <li>visual editing</li>
-            <li>weighted/directed edges</li>
-            <li>animated traversal</li>
-            <li>manual step traversal</li>
-            <li>pan/zoom</li>
-            <li>local saves</li>
-            <li>undo/redo</li>
+            <li>visual node and edge editing</li>
+            <li>directed and weighted graph support</li>
+            <li>BFS and DFS traversal animation</li>
+            <li>Dijkstra and Bellman-Ford shortest path visualization</li>
+            <li>Prim’s minimum spanning tree visualization</li>
+            <li>manual step-by-step traversal</li>
+            <li>pan and zoom</li>
+            <li>local saves, import/export, undo, and redo</li>
         </ul>
     </header>
     <main>
