@@ -139,16 +139,6 @@ class Node {
     }
 
     /**
-     * Compare this node with another node alphabetically by label.
-     *
-     * @param {Node} other - Another node.
-     * @returns {number} Sort result.
-     */
-    compareTo(other) {
-        return this.label.localeCompare(other.label);
-    }
-
-    /**
      * Normalize radius.
      *
      * @param {number|string|null|undefined} radius - Radius candidate.
@@ -176,6 +166,94 @@ class Node {
         if (Number.isFinite(parsed) && parsed > 0) {
             Node.DEFAULT_RADIUS = parsed;
         }
+    }
+
+    /**
+     * Resolve drawing style from render state.
+     *
+     * @param {RenderState} state - Render state.
+     * @returns {object} Style.
+     */
+    static getDrawStyle(state) {
+        const style = {
+            fill: "rgba(148, 163, 184, 0.6)",
+            stroke: "rgba(148, 163, 184, 0.6)",
+            lineWidth: 2
+        };
+
+        if (state.visited) {
+            style.fill = "#5cb85c";
+            style.stroke = "#5cb85c";
+        }
+
+        if (state.hovered) {
+            style.fill = "#ef4444";
+            style.stroke = "#ef4444";
+            style.lineWidth = 4;
+        }
+
+        if (state.active) {
+            style.fill = "#f59e0b";
+            style.stroke = "#f59e0b";
+            style.lineWidth = 4;
+        }
+
+        if (state.selected) {
+            style.fill = "#8b5cf6";
+            style.stroke = "#8b5cf6";
+            style.lineWidth = 4;
+        }
+
+        if (state.path) {
+            style.fill = "#38bdf8";
+            style.stroke = "#38bdf8";
+            style.lineWidth = 5;
+        }
+
+        return style;
+    }
+
+    /**
+     * Draw rounded rectangle.
+     *
+     * @param {CanvasRenderingContext2D} ctx - Canvas context.
+     * @param {number} x - X.
+     * @param {number} y - Y.
+     * @param {number} width - Width.
+     * @param {number} height - Height.
+     * @param {number} radius - Radius.
+     */
+    static #drawRoundRect(ctx, x, y, width, height, radius) {
+        ctx.beginPath();
+
+        if (typeof ctx.roundRect === "function") {
+            ctx.roundRect(x, y, width, height, radius);
+            ctx.fill();
+            ctx.stroke();
+        } else {
+            ctx.fillRect(x, y, width, height);
+            ctx.strokeRect(x, y, width, height);
+        }
+    }
+
+    /**
+     * Create node from imported data without changing imported id.
+     *
+     * @param {object} data - Imported node data.
+     * @returns {Node} Node.
+     */
+    static fromJSON(data) {
+        return new Node(data.id, data.label, data.x, data.y, data.radius);
+    }
+
+    /**
+     * Compare this node with another node alphabetically by label.
+     *
+     * @param {Node} other - Another node.
+     * @returns {number} Sort result.
+     */
+    compareTo(other) {
+        return this.label.localeCompare(other.label);
     }
 
     /**
@@ -251,51 +329,6 @@ class Node {
     }
 
     /**
-     * Resolve drawing style from render state.
-     *
-     * @param {RenderState} state - Render state.
-     * @returns {object} Style.
-     */
-    static getDrawStyle(state) {
-        const style = {
-            fill: "rgba(148, 163, 184, 0.6)",
-            stroke: "rgba(148, 163, 184, 0.6)",
-            lineWidth: 2
-        };
-
-        if (state.visited) {
-            style.fill = "#5cb85c";
-            style.stroke = "#5cb85c";
-        }
-
-        if (state.hovered) {
-            style.fill = "#ef4444";
-            style.stroke = "#ef4444";
-            style.lineWidth = 4;
-        }
-
-        if (state.active) {
-            style.fill = "#f59e0b";
-            style.stroke = "#f59e0b";
-            style.lineWidth = 4;
-        }
-
-        if (state.selected) {
-            style.fill = "#8b5cf6";
-            style.stroke = "#8b5cf6";
-            style.lineWidth = 4;
-        }
-
-        if (state.path) {
-            style.fill = "#38bdf8";
-            style.stroke = "#38bdf8";
-            style.lineWidth = 5;
-        }
-
-        return style;
-    }
-
-    /**
      * Draw node circle.
      *
      * @param {CanvasRenderingContext2D} ctx - Canvas context.
@@ -356,29 +389,6 @@ class Node {
     }
 
     /**
-     * Draw rounded rectangle.
-     *
-     * @param {CanvasRenderingContext2D} ctx - Canvas context.
-     * @param {number} x - X.
-     * @param {number} y - Y.
-     * @param {number} width - Width.
-     * @param {number} height - Height.
-     * @param {number} radius - Radius.
-     */
-    static #drawRoundRect(ctx, x, y, width, height, radius) {
-        ctx.beginPath();
-
-        if (typeof ctx.roundRect === "function") {
-            ctx.roundRect(x, y, width, height, radius);
-            ctx.fill();
-            ctx.stroke();
-        } else {
-            ctx.fillRect(x, y, width, height);
-            ctx.strokeRect(x, y, width, height);
-        }
-    }
-
-    /**
      * Serialize node.
      *
      * @returns {object} Plain node data.
@@ -391,16 +401,6 @@ class Node {
             y: this.y,
             radius: this.radius
         };
-    }
-
-    /**
-     * Create node from imported data without changing imported id.
-     *
-     * @param {object} data - Imported node data.
-     * @returns {Node} Node.
-     */
-    static fromJSON(data) {
-        return new Node(data.id, data.label, data.x, data.y, data.radius);
     }
 }
 
@@ -422,6 +422,16 @@ class Edge {
         this.to = String(to);
         this.weight = Number(weight);
         this.renderState = new RenderState();
+    }
+
+    /**
+     * Create edge from imported data without changing imported id.
+     *
+     * @param {object} data - Imported edge data.
+     * @returns {Edge} Edge.
+     */
+    static fromJSON(data) {
+        return new Edge(data.id, data.from, data.to, data.weight);
     }
 
     /**
@@ -595,16 +605,6 @@ class Edge {
             weight: this.weight
         };
     }
-
-    /**
-     * Create edge from imported data without changing imported id.
-     *
-     * @param {object} data - Imported edge data.
-     * @returns {Edge} Edge.
-     */
-    static fromJSON(data) {
-        return new Edge(data.id, data.from, data.to, data.weight);
-    }
 }
 
 /**
@@ -629,6 +629,84 @@ class Graph {
         this.edgeOrder = [];
         this.directed = false;
         this.weighted = false;
+    }
+
+    /**
+     * Loads sample graph data from file.
+     *
+     * @returns {Promise<object>} Sample graph data.
+     */
+    static async loadSampleAsync() {
+        const response = await fetch("./sample-graph-data.json");
+
+        if (!response.ok) {
+            throw new Error("Failed to load sample graph data.");
+        }
+
+        return response.json();
+    }
+
+    /**
+     * Create stable unique node id.
+     *
+     * @returns {string} Node id.
+     */
+    static createNodeId() {
+        if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+            return `n:${crypto.randomUUID()}`;
+        }
+
+        return `n:${Graph.#createFallbackId()}`;
+    }
+
+    /**
+     * Create fallback unique id.
+     *
+     * @returns {string} Id.
+     */
+    static #createFallbackId() {
+        const time = Date.now().toString(36);
+        const random = Graph.#randomString(10);
+
+        return `${time}-${random}`;
+    }
+
+    /**
+     * Generate random string.
+     *
+     * @param {number} length - String length.
+     * @returns {string} Random string.
+     */
+    static #randomString(length) {
+        const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+        let result = "";
+
+        for (let i = 0; i < length; i += 1) {
+            const index = Math.floor(Math.random() * chars.length);
+            result += chars.charAt(index);
+        }
+
+        return result;
+    }
+
+    /**
+     * Create deterministic edge id from endpoints.
+     *
+     * @param {string} from - Source node id.
+     * @param {string} to - Target node id.
+     * @param {boolean} directed - Whether graph is directed.
+     * @returns {string} Edge id.
+     */
+    static createEdgeId(from, to, directed) {
+        const fromId = String(from);
+        const toId = String(to);
+
+        if (directed) {
+            return `e:${fromId}->${toId}`;
+        }
+
+        const ordered = [fromId, toId].sort();
+        return `e:${ordered[0]}--${ordered[1]}`;
     }
 
     /**
@@ -758,69 +836,6 @@ class Graph {
     }
 
     /**
-     * Create stable unique node id.
-     *
-     * @returns {string} Node id.
-     */
-    static createNodeId() {
-        if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-            return `n:${crypto.randomUUID()}`;
-        }
-
-        return `n:${Graph.#createFallbackId()}`;
-    }
-
-    /**
-     * Create fallback unique id.
-     *
-     * @returns {string} Id.
-     */
-    static #createFallbackId() {
-        const time = Date.now().toString(36);
-        const random = Graph.#randomString(10);
-
-        return `${time}-${random}`;
-    }
-
-    /**
-     * Generate random string.
-     *
-     * @param {number} length - String length.
-     * @returns {string} Random string.
-     */
-    static #randomString(length) {
-        const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-        let result = "";
-
-        for (let i = 0; i < length; i += 1) {
-            const index = Math.floor(Math.random() * chars.length);
-            result += chars.charAt(index);
-        }
-
-        return result;
-    }
-
-    /**
-     * Create deterministic edge id from endpoints.
-     *
-     * @param {string} from - Source node id.
-     * @param {string} to - Target node id.
-     * @param {boolean} directed - Whether graph is directed.
-     * @returns {string} Edge id.
-     */
-    static createEdgeId(from, to, directed) {
-        const fromId = String(from);
-        const toId = String(to);
-
-        if (directed) {
-            return `e:${fromId}->${toId}`;
-        }
-
-        const ordered = [fromId, toId].sort();
-        return `e:${ordered[0]}--${ordered[1]}`;
-    }
-
-    /**
      * Add node.
      *
      * @param {number} x - X position.
@@ -914,7 +929,6 @@ class Graph {
 
         if (this.edgeMap.has(edgeId)) {
             this.saveHistory();
-
             this.edgeMap.delete(edgeId);
 
             this.edgeOrder = this.edgeOrder.filter(function keep(value) {
@@ -1929,6 +1943,25 @@ class App {
     }
 
     /**
+     * Convert number to letters.
+     *
+     * @param {number} value - Number.
+     * @returns {string} Letter label.
+     */
+    static numberToLetters(value) {
+        let number = Number(value);
+        let label = "";
+
+        while (number > 0) {
+            number -= 1;
+            label = String.fromCharCode(65 + (number % 26)) + label;
+            number = Math.floor(number / 26);
+        }
+
+        return label;
+    }
+
+    /**
      * Get traversal distance for a node.
      *
      * @param {string} nodeId - Node id.
@@ -2498,25 +2531,6 @@ class App {
         return order.map(function formatNodeId(nodeId) {
             return this.#getNodeLabel(nodeId);
         }, this).join(" → ");
-    }
-
-    /**
-     * Convert number to letters.
-     *
-     * @param {number} value - Number.
-     * @returns {string} Letter label.
-     */
-    static numberToLetters(value) {
-        let number = Number(value);
-        let label = "";
-
-        while (number > 0) {
-            number -= 1;
-            label = String.fromCharCode(65 + (number % 26)) + label;
-            number = Math.floor(number / 26);
-        }
-
-        return label;
     }
 
     /**
@@ -3357,8 +3371,7 @@ class App {
         } else if (plan.algorithm === "prim") {
             this.#writePrimOutput(plan);
         } else {
-            this.#elements.traversalOutput.innerHTML =
-                `${plan.name} order:<hr>${this.#formatNodeOrder(plan.order)}`;
+            this.#elements.traversalOutput.innerHTML = `${plan.name} order:<hr>${this.#formatNodeOrder(plan.order)}`;
         }
     }
 
@@ -3534,897 +3547,15 @@ class App {
      * Load the sample graph.
      */
     loadSampleGraph() {
-        this.graph.load(App.sampleData());
-        this.#resetAfterGraphLoad();
-        this.setStatus("Sample graph loaded.");
-    }
-
-    /**
-     * Sample graph.
-     *
-     * @returns {object} Sample graph data.
-     */
-    static sampleData() {
-        return {
-            "directed": false,
-            "weighted": true,
-            "nodes": [
-                {
-                    "id": 1,
-                    "label": "Seattle",
-                    "x": 95,
-                    "y": 85,
-                    "radius": null
-                },
-                {
-                    "id": 2,
-                    "label": "Portland",
-                    "x": 80,
-                    "y": 155,
-                    "radius": null
-                },
-                {
-                    "id": 3,
-                    "label": "San Francisco",
-                    "x": 65,
-                    "y": 355,
-                    "radius": null
-                },
-                {
-                    "id": 4,
-                    "label": "Los Angeles",
-                    "x": 95,
-                    "y": 505,
-                    "radius": null
-                },
-                {
-                    "id": 5,
-                    "label": "San Diego",
-                    "x": 120,
-                    "y": 555,
-                    "radius": null
-                },
-                {
-                    "id": 6,
-                    "label": "Las Vegas",
-                    "x": 155,
-                    "y": 420,
-                    "radius": null
-                },
-                {
-                    "id": 7,
-                    "label": "Phoenix",
-                    "x": 210,
-                    "y": 525,
-                    "radius": null
-                },
-                {
-                    "id": 8,
-                    "label": "Salt Lake City",
-                    "x": 245,
-                    "y": 320,
-                    "radius": null
-                },
-                {
-                    "id": 9,
-                    "label": "Boise",
-                    "x": 210,
-                    "y": 205,
-                    "radius": null
-                },
-                {
-                    "id": 10,
-                    "label": "Billings",
-                    "x": 360,
-                    "y": 155,
-                    "radius": null
-                },
-                {
-                    "id": 11,
-                    "label": "Denver",
-                    "x": 385,
-                    "y": 355,
-                    "radius": null
-                },
-                {
-                    "id": 12,
-                    "label": "Albuquerque",
-                    "x": 335,
-                    "y": 490,
-                    "radius": null
-                },
-                {
-                    "id": 13,
-                    "label": "El Paso",
-                    "x": 375,
-                    "y": 605,
-                    "radius": null
-                },
-                {
-                    "id": 14,
-                    "label": "Dallas",
-                    "x": 510,
-                    "y": 540,
-                    "radius": null
-                },
-                {
-                    "id": 15,
-                    "label": "Houston",
-                    "x": 545,
-                    "y": 625,
-                    "radius": null
-                },
-                {
-                    "id": 16,
-                    "label": "San Antonio",
-                    "x": 495,
-                    "y": 640,
-                    "radius": null
-                },
-                {
-                    "id": 17,
-                    "label": "New Orleans",
-                    "x": 655,
-                    "y": 595,
-                    "radius": null
-                },
-                {
-                    "id": 18,
-                    "label": "Miami",
-                    "x": 855,
-                    "y": 705,
-                    "radius": null
-                },
-                {
-                    "id": 19,
-                    "label": "Tampa",
-                    "x": 800,
-                    "y": 620,
-                    "radius": null
-                },
-                {
-                    "id": 20,
-                    "label": "Jacksonville",
-                    "x": 810,
-                    "y": 520,
-                    "radius": null
-                },
-                {
-                    "id": 21,
-                    "label": "Atlanta",
-                    "x": 735,
-                    "y": 445,
-                    "radius": null
-                },
-                {
-                    "id": 22,
-                    "label": "Charlotte",
-                    "x": 805,
-                    "y": 395,
-                    "radius": null
-                },
-                {
-                    "id": 23,
-                    "label": "Raleigh",
-                    "x": 850,
-                    "y": 365,
-                    "radius": null
-                },
-                {
-                    "id": 24,
-                    "label": "Washington DC",
-                    "x": 855,
-                    "y": 285,
-                    "radius": null
-                },
-                {
-                    "id": 25,
-                    "label": "Philadelphia",
-                    "x": 885,
-                    "y": 235,
-                    "radius": null
-                },
-                {
-                    "id": 26,
-                    "label": "New York",
-                    "x": 920,
-                    "y": 195,
-                    "radius": null
-                },
-                {
-                    "id": 27,
-                    "label": "Boston",
-                    "x": 960,
-                    "y": 135,
-                    "radius": null
-                },
-                {
-                    "id": 28,
-                    "label": "Detroit",
-                    "x": 720,
-                    "y": 225,
-                    "radius": null
-                },
-                {
-                    "id": 29,
-                    "label": "Chicago",
-                    "x": 650,
-                    "y": 265,
-                    "radius": null
-                },
-                {
-                    "id": 30,
-                    "label": "Minneapolis",
-                    "x": 555,
-                    "y": 170,
-                    "radius": null
-                },
-                {
-                    "id": 31,
-                    "label": "Kansas City",
-                    "x": 545,
-                    "y": 365,
-                    "radius": null
-                },
-                {
-                    "id": 32,
-                    "label": "Oklahoma City",
-                    "x": 510,
-                    "y": 455,
-                    "radius": null
-                },
-                {
-                    "id": 33,
-                    "label": "Spokane",
-                    "x": 175,
-                    "y": 105,
-                    "radius": null
-                },
-                {
-                    "id": 34,
-                    "label": "Missoula",
-                    "x": 285,
-                    "y": 135,
-                    "radius": null
-                },
-                {
-                    "id": 35,
-                    "label": "Rapid City",
-                    "x": 455,
-                    "y": 235,
-                    "radius": null
-                },
-                {
-                    "id": 36,
-                    "label": "Sioux Falls",
-                    "x": 535,
-                    "y": 255,
-                    "radius": null
-                },
-                {
-                    "id": 37,
-                    "label": "Buffalo",
-                    "x": 800,
-                    "y": 200,
-                    "radius": null
-                },
-                {
-                    "id": 38,
-                    "label": "Cleveland",
-                    "x": 745,
-                    "y": 250,
-                    "radius": null
-                },
-                {
-                    "id": 39,
-                    "label": "Omaha",
-                    "x": 545,
-                    "y": 315,
-                    "radius": null
-                },
-                {
-                    "id": 40,
-                    "label": "St Louis",
-                    "x": 625,
-                    "y": 385,
-                    "radius": null
-                },
-                {
-                    "id": 41,
-                    "label": "Memphis",
-                    "x": 625,
-                    "y": 470,
-                    "radius": null
-                },
-                {
-                    "id": 42,
-                    "label": "Nashville",
-                    "x": 690,
-                    "y": 425,
-                    "radius": null
-                },
-                {
-                    "id": 43,
-                    "label": "Cincinnati",
-                    "x": 705,
-                    "y": 330,
-                    "radius": null
-                },
-                {
-                    "id": 44,
-                    "label": "Pittsburgh",
-                    "x": 785,
-                    "y": 275,
-                    "radius": null
-                },
-                {
-                    "id": 45,
-                    "label": "Indianapolis",
-                    "x": 670,
-                    "y": 315,
-                    "radius": null
-                },
-                {
-                    "id": 46,
-                    "label": "Louisville",
-                    "x": 690,
-                    "y": 365,
-                    "radius": null
-                },
-                {
-                    "id": 47,
-                    "label": "Orlando",
-                    "x": 815,
-                    "y": 590,
-                    "radius": null
-                },
-                {
-                    "id": 48,
-                    "label": "Savannah",
-                    "x": 780,
-                    "y": 490,
-                    "radius": null
-                },
-                {
-                    "id": 49,
-                    "label": "Charleston",
-                    "x": 815,
-                    "y": 460,
-                    "radius": null
-                },
-                {
-                    "id": 50,
-                    "label": "Birmingham",
-                    "x": 695,
-                    "y": 505,
-                    "radius": null
-                }
-            ],
-            "edges": [
-                {
-                    "id": "e1",
-                    "from": 1,
-                    "to": 2,
-                    "weight": 145
-                },
-                {
-                    "id": "e2",
-                    "from": 2,
-                    "to": 3,
-                    "weight": 535
-                },
-                {
-                    "id": "e3",
-                    "from": 3,
-                    "to": 4,
-                    "weight": 347
-                },
-                {
-                    "id": "e4",
-                    "from": 4,
-                    "to": 5,
-                    "weight": 111
-                },
-                {
-                    "id": "e5",
-                    "from": 5,
-                    "to": 7,
-                    "weight": 299
-                },
-                {
-                    "id": "e6",
-                    "from": 7,
-                    "to": 13,
-                    "weight": 347
-                },
-                {
-                    "id": "e7",
-                    "from": 13,
-                    "to": 16,
-                    "weight": 501
-                },
-                {
-                    "id": "e8",
-                    "from": 16,
-                    "to": 15,
-                    "weight": 190
-                },
-                {
-                    "id": "e9",
-                    "from": 15,
-                    "to": 17,
-                    "weight": 318
-                },
-                {
-                    "id": "e10",
-                    "from": 17,
-                    "to": 20,
-                    "weight": 503
-                },
-                {
-                    "id": "e11",
-                    "from": 20,
-                    "to": 19,
-                    "weight": 171
-                },
-                {
-                    "id": "e12",
-                    "from": 19,
-                    "to": 18,
-                    "weight": 205
-                },
-                {
-                    "id": "e13",
-                    "from": 20,
-                    "to": 23,
-                    "weight": 407
-                },
-                {
-                    "id": "e14",
-                    "from": 23,
-                    "to": 24,
-                    "weight": 233
-                },
-                {
-                    "id": "e15",
-                    "from": 24,
-                    "to": 25,
-                    "weight": 123
-                },
-                {
-                    "id": "e16",
-                    "from": 25,
-                    "to": 26,
-                    "weight": 81
-                },
-                {
-                    "id": "e17",
-                    "from": 26,
-                    "to": 27,
-                    "weight": 190
-                },
-                {
-                    "id": "e18",
-                    "from": 1,
-                    "to": 33,
-                    "weight": 228
-                },
-                {
-                    "id": "e19",
-                    "from": 33,
-                    "to": 34,
-                    "weight": 169
-                },
-                {
-                    "id": "e20",
-                    "from": 34,
-                    "to": 10,
-                    "weight": 345
-                },
-                {
-                    "id": "e21",
-                    "from": 10,
-                    "to": 35,
-                    "weight": 317
-                },
-                {
-                    "id": "e22",
-                    "from": 35,
-                    "to": 36,
-                    "weight": 350
-                },
-                {
-                    "id": "e23",
-                    "from": 36,
-                    "to": 30,
-                    "weight": 198
-                },
-                {
-                    "id": "e24",
-                    "from": 36,
-                    "to": 29,
-                    "weight": 508
-                },
-                {
-                    "id": "e25",
-                    "from": 29,
-                    "to": 28,
-                    "weight": 237
-                },
-                {
-                    "id": "e26",
-                    "from": 28,
-                    "to": 38,
-                    "weight": 90
-                },
-                {
-                    "id": "e27",
-                    "from": 38,
-                    "to": 37,
-                    "weight": 173
-                },
-                {
-                    "id": "e28",
-                    "from": 37,
-                    "to": 26,
-                    "weight": 292
-                },
-                {
-                    "id": "e29",
-                    "from": 2,
-                    "to": 9,
-                    "weight": 344
-                },
-                {
-                    "id": "e30",
-                    "from": 9,
-                    "to": 34,
-                    "weight": 340
-                },
-                {
-                    "id": "e31",
-                    "from": 9,
-                    "to": 8,
-                    "weight": 296
-                },
-                {
-                    "id": "e32",
-                    "from": 8,
-                    "to": 6,
-                    "weight": 363
-                },
-                {
-                    "id": "e33",
-                    "from": 6,
-                    "to": 4,
-                    "weight": 228
-                },
-                {
-                    "id": "e34",
-                    "from": 6,
-                    "to": 7,
-                    "weight": 256
-                },
-                {
-                    "id": "e35",
-                    "from": 8,
-                    "to": 11,
-                    "weight": 371
-                },
-                {
-                    "id": "e36",
-                    "from": 11,
-                    "to": 12,
-                    "weight": 333
-                },
-                {
-                    "id": "e37",
-                    "from": 12,
-                    "to": 13,
-                    "weight": 230
-                },
-                {
-                    "id": "e38",
-                    "from": 12,
-                    "to": 7,
-                    "weight": 332
-                },
-                {
-                    "id": "e39",
-                    "from": 11,
-                    "to": 35,
-                    "weight": 390
-                },
-                {
-                    "id": "e40",
-                    "from": 35,
-                    "to": 39,
-                    "weight": 520
-                },
-                {
-                    "id": "e41",
-                    "from": 39,
-                    "to": 36,
-                    "weight": 183
-                },
-                {
-                    "id": "e42",
-                    "from": 39,
-                    "to": 31,
-                    "weight": 185
-                },
-                {
-                    "id": "e43",
-                    "from": 31,
-                    "to": 29,
-                    "weight": 412
-                },
-                {
-                    "id": "e44",
-                    "from": 31,
-                    "to": 32,
-                    "weight": 298
-                },
-                {
-                    "id": "e45",
-                    "from": 32,
-                    "to": 14,
-                    "weight": 190
-                },
-                {
-                    "id": "e46",
-                    "from": 14,
-                    "to": 15,
-                    "weight": 225
-                },
-                {
-                    "id": "e47",
-                    "from": 14,
-                    "to": 17,
-                    "weight": 443
-                },
-                {
-                    "id": "e48",
-                    "from": 32,
-                    "to": 12,
-                    "weight": 516
-                },
-                {
-                    "id": "e49",
-                    "from": 14,
-                    "to": 16,
-                    "weight": 275
-                },
-                {
-                    "id": "e50",
-                    "from": 31,
-                    "to": 40,
-                    "weight": 250
-                },
-                {
-                    "id": "e51",
-                    "from": 40,
-                    "to": 29,
-                    "weight": 297
-                },
-                {
-                    "id": "e52",
-                    "from": 40,
-                    "to": 45,
-                    "weight": 242
-                },
-                {
-                    "id": "e53",
-                    "from": 45,
-                    "to": 29,
-                    "weight": 183
-                },
-                {
-                    "id": "e54",
-                    "from": 45,
-                    "to": 43,
-                    "weight": 112
-                },
-                {
-                    "id": "e55",
-                    "from": 43,
-                    "to": 38,
-                    "weight": 249
-                },
-                {
-                    "id": "e56",
-                    "from": 43,
-                    "to": 44,
-                    "weight": 288
-                },
-                {
-                    "id": "e57",
-                    "from": 44,
-                    "to": 24,
-                    "weight": 245
-                },
-                {
-                    "id": "e58",
-                    "from": 44,
-                    "to": 37,
-                    "weight": 219
-                },
-                {
-                    "id": "e59",
-                    "from": 29,
-                    "to": 38,
-                    "weight": 307
-                },
-                {
-                    "id": "e60",
-                    "from": 28,
-                    "to": 37,
-                    "weight": 256
-                },
-                {
-                    "id": "e61",
-                    "from": 40,
-                    "to": 41,
-                    "weight": 283
-                },
-                {
-                    "id": "e62",
-                    "from": 41,
-                    "to": 17,
-                    "weight": 395
-                },
-                {
-                    "id": "e63",
-                    "from": 41,
-                    "to": 42,
-                    "weight": 212
-                },
-                {
-                    "id": "e64",
-                    "from": 42,
-                    "to": 21,
-                    "weight": 250
-                },
-                {
-                    "id": "e65",
-                    "from": 42,
-                    "to": 46,
-                    "weight": 175
-                },
-                {
-                    "id": "e66",
-                    "from": 46,
-                    "to": 43,
-                    "weight": 100
-                },
-                {
-                    "id": "e67",
-                    "from": 46,
-                    "to": 45,
-                    "weight": 114
-                },
-                {
-                    "id": "e68",
-                    "from": 50,
-                    "to": 21,
-                    "weight": 147
-                },
-                {
-                    "id": "e69",
-                    "from": 50,
-                    "to": 17,
-                    "weight": 344
-                },
-                {
-                    "id": "e70",
-                    "from": 50,
-                    "to": 41,
-                    "weight": 240
-                },
-                {
-                    "id": "e71",
-                    "from": 21,
-                    "to": 22,
-                    "weight": 226
-                },
-                {
-                    "id": "e72",
-                    "from": 22,
-                    "to": 23,
-                    "weight": 130
-                },
-                {
-                    "id": "e73",
-                    "from": 22,
-                    "to": 24,
-                    "weight": 329
-                },
-                {
-                    "id": "e74",
-                    "from": 21,
-                    "to": 20,
-                    "weight": 285
-                },
-                {
-                    "id": "e75",
-                    "from": 21,
-                    "to": 17,
-                    "weight": 424
-                },
-                {
-                    "id": "e76",
-                    "from": 21,
-                    "to": 48,
-                    "weight": 248
-                },
-                {
-                    "id": "e77",
-                    "from": 48,
-                    "to": 20,
-                    "weight": 140
-                },
-                {
-                    "id": "e78",
-                    "from": 48,
-                    "to": 49,
-                    "weight": 108
-                },
-                {
-                    "id": "e79",
-                    "from": 49,
-                    "to": 22,
-                    "weight": 209
-                },
-                {
-                    "id": "e80",
-                    "from": 20,
-                    "to": 47,
-                    "weight": 141
-                },
-                {
-                    "id": "e81",
-                    "from": 47,
-                    "to": 19,
-                    "weight": 84
-                },
-                {
-                    "id": "e82",
-                    "from": 47,
-                    "to": 18,
-                    "weight": 235
-                },
-                {
-                    "id": "e83",
-                    "from": 10,
-                    "to": 8,
-                    "weight": 420
-                },
-                {
-                    "id": "e84",
-                    "from": 10,
-                    "to": 11,
-                    "weight": 455
-                },
-                {
-                    "id": "e85",
-                    "from": 30,
-                    "to": 31,
-                    "weight": 412
-                },
-                {
-                    "id": "e86",
-                    "from": 29,
-                    "to": 24,
-                    "weight": 594
-                },
-                {
-                    "id": "e87",
-                    "from": 23,
-                    "to": 49,
-                    "weight": 279
-                }
-            ]
-        };
+        Graph.loadSampleAsync()
+            .then((data) => {
+                this.graph.load(data);
+                this.#resetAfterGraphLoad();
+                this.setStatus("Sample graph loaded.");
+            })
+            .catch((error) => {
+                this.setStatus(error.message);
+            });
     }
 }
 
