@@ -836,6 +836,24 @@ class Graph {
     }
 
     /**
+     * Resolve a new node label.
+     *
+     * @param {string|null} label - Optional explicit label.
+     * @returns {string} Resolved label.
+     */
+    #resolveNodeLabel(label) {
+        let resolvedLabel;
+
+        if (label === null) {
+            resolvedLabel = String(this.nodeOrder.length);
+        } else {
+            resolvedLabel = String(label);
+        }
+
+        return resolvedLabel;
+    }
+
+    /**
      * Add node.
      *
      * @param {number} x - X position.
@@ -848,7 +866,7 @@ class Graph {
         this.saveHistory();
 
         const id = Graph.createNodeId();
-        const resolvedLabel = label === null ? String(this.nodeOrder.length + 1) : String(label);
+        const resolvedLabel = this.#resolveNodeLabel(label);
         const node = new Node(id, resolvedLabel, x, y, radius);
 
         this.nodeMap.set(node.id, node);
@@ -2486,13 +2504,9 @@ class App {
      */
     #handleAddNode(point, existingNode) {
         if (!existingNode) {
-            const node = this.graph.addNode(point.x, point.y);
-
-            if (node) {
-                node.label = this.#createNodeLabel();
-                this.refreshNodeSelectors();
-                this.setStatus("Node added.");
-            }
+            this.graph.addNode(point.x, point.y, this.#createNodeLabel());
+            this.refreshNodeSelectors();
+            this.setStatus("Node added.");
         }
     }
 
@@ -2502,11 +2516,9 @@ class App {
      * @returns {string} Node label.
      */
     #createNodeLabel() {
-        if (this.#elements.nodeLabelModeSelect.value === "alphabetic") {
-            return App.numberToLetters(this.graph.nodeOrder.length);
-        }
-
-        return String(this.graph.nodeOrder.length);
+        return (this.#elements.nodeLabelModeSelect.value === "alphabetic") ?
+            App.numberToLetters(this.graph.nodeOrder.length + 1):
+            null;
     }
 
     /**
