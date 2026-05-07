@@ -2249,6 +2249,17 @@ class App {
     }
 
     /**
+     * Switch UI mode and sync visible panels.
+     * @param {string} mode - New mode.
+     */
+    #setMode(mode) {
+        this.#uiState.mode = mode;
+        this.#elements.modeSelect.value = mode;
+
+        this.syncControls();
+    }
+
+    /**
      * Sync active mode panel.
      */
     #syncModePanels() {
@@ -2387,10 +2398,9 @@ class App {
      * Handle mode change.
      */
     handleModeChange() {
-        this.#uiState.mode = this.#elements.modeSelect.value;
+        this.#setMode(this.#elements.modeSelect.value);
         this.#resetComposeSelection();
 
-        this.syncControls();
         this.setStatus("Mode changed.");
         this.draw();
     }
@@ -2483,14 +2493,15 @@ class App {
         const node = this.graph.findNodeAt(point.x, point.y);
         const edge = node ? null : this.graph.findEdgeAt(point.x, point.y);
 
-        if (this.#uiState.mode === "add-node") {
-            this.#handleAddNode(point, node);
+        if (this.#uiState.mode === "delete") {
+            this.#handleDeleteMode(node, edge);
         } else if (this.#uiState.mode === "add-edge") {
             this.#handleAddEdgeMode(node);
-        } else if (this.#uiState.mode === "edit") {
+        } else if (node || edge) {
+            this.#setMode("edit");
             this.#handleEditMode(node, edge);
-        } else if (this.#uiState.mode === "delete") {
-            this.#handleDeleteMode(node, edge);
+        } else if (this.#uiState.mode === "add-node") {
+            this.#handleAddNode(point, null);
         }
 
         this.#updateSummaryPills();
@@ -2513,12 +2524,16 @@ class App {
     /**
      * Create a label for a new node.
      *
-     * @returns {string} Node label.
+     * @returns {string|null} Node label or null for automatic numeric label.
      */
     #createNodeLabel() {
-        return (this.#elements.nodeLabelModeSelect.value === "alphabetic") ?
-            App.numberToLetters(this.graph.nodeOrder.length + 1):
-            null;
+        let label = null;
+
+        if (this.#elements.nodeLabelModeSelect.value === "alphabetic") {
+            label = App.numberToLetters(this.graph.nodeOrder.length + 1);
+        }
+
+        return label;
     }
 
     /**
@@ -2822,9 +2837,11 @@ class App {
         const node = this.graph.findNodeAt(point.x, point.y);
         const shouldPan = event.button === 1 || event.altKey || !node;
 
-        if (this.#uiState.mode === "move" && node && !shouldPan) {
+        if (node && !shouldPan && this.#uiState.mode !== "add-edge" && this.#uiState.mode !== "delete") {
+            this.#setMode("move");
             this.graph.saveHistory();
             this.#uiState.draggedNodeId = node.id;
+            this.#handleEditMode(node, null);
         } else if (shouldPan) {
             this.#startPan(point);
         }
@@ -2911,7 +2928,7 @@ class App {
     #moveDraggedNode(point) {
         const node = this.graph.getNodeById(this.#uiState.draggedNodeId);
 
-        if (this.#uiState.mode === "move" && node) {
+        if (node) {
             node.moveTo(point.x, point.y);
         }
     }
