@@ -119,7 +119,7 @@ aside {
         width: 300px;
         vertical-align: top;
         white-space: normal;
-        border: 1px solid var(--canvas);
+        border: 2px solid var(--canvas);
         border-radius: var(--space-lg);
         background: var(--muted-strong);
         padding: var(--space-xl);
