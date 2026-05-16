@@ -2,8 +2,15 @@
 
 > Interactive graph editor and algorithm visualizer built with HTML5 Canvas and vanilla JavaScript.
 
-Graph Visualizer is a browser-based application for building, editing, traversing, and visualizing graphs in real time.  
-It focuses on deterministic traversal behavior, interactive editing, and clear visual feedback during algorithm execution.
+Graph Visualizer is a browser-based application for building, editing, traversing, and visualizing graphs in real time.
+
+It focuses on:
+
+- deterministic traversal behavior
+- interactive graph editing
+- real-time algorithm visualization
+- clear rendering architecture
+- maintainable object-oriented design
 
 ---
 
@@ -21,10 +28,12 @@ It focuses on deterministic traversal behavior, interactive editing, and clear v
 10. Controls
 11. JSON Format
 12. Project Structure
-13. Limitations
-14. Future Improvements
-15. Running Locally
-16. License
+13. Design Principles
+14. Limitations
+15. Future Improvements
+16. Running Locally
+17. Author
+18. License
 
 ---
 
@@ -52,7 +61,7 @@ It focuses on deterministic traversal behavior, interactive editing, and clear v
 - Traversal animation
 - Distance badge rendering
 - Final shortest-path highlighting
-- MST highlighting
+- Minimum spanning tree highlighting
 - Step-by-step traversal playback
 
 ---
@@ -87,25 +96,37 @@ It focuses on deterministic traversal behavior, interactive editing, and clear v
 
 # Architecture
 
-The application is divided into several focused systems.
+The application follows a layered top-to-bottom architecture.
 
-| Class        | Responsibility              |
-|:-------------|:----------------------------|
-| RenderState  | Visual state flags          |
-| Node         | Node data and rendering     |
-| Edge         | Edge data and rendering     |
-| Graph        | Graph structure and history |
-| Traversal    | Algorithm planning          |
-| Geometry     | Math helpers                |
-| AppMode      | UI mode helpers             |
-| App          | Application controller      |
+---
+
+## Core Systems
+
+| Class                 | Responsibility                     |
+|:----------------------|:-----------------------------------|
+| RenderState           | Visual traversal state             |
+| Geometry              | Shared geometry utilities          |
+| Node                  | Node data and rendering            |
+| Edge                  | Edge data and rendering            |
+| Graph                 | Graph structure and history        |
+| TraversalResult       | Traversal result container         |
+| Traversal             | Shared traversal infrastructure    |
+| BreadthFirst          | BFS traversal planner              |
+| DepthFirst            | DFS traversal planner              |
+| ShortestPathTraversal | Shared shortest-path behavior      |
+| Dijkstra              | Dijkstra planner                   |
+| BellmanFord           | Bellman-Ford planner               |
+| Prim                  | Prim MST planner                   |
+| TraversalFactory      | Traversal creation                 |
+| AppMode               | UI mode helpers                    |
+| GraphController       | Application controller             |
 
 ---
 
 ## Rendering Pipeline
 
 ```text
-App.draw()
+GraphController.draw()
     -> drawGrid()
     -> graph.drawEdges()
     -> graph.drawNodes()
@@ -204,11 +225,23 @@ The editor combines persistent modes with transient interactions.
 
 Explores graph layers level-by-level using a queue.
 
+Characteristics:
+
+- Iterative traversal
+- Deterministic neighbor order
+- Shortest path in unweighted graphs
+
 ---
 
 ## Depth-First Search (DFS)
 
 Explores as deeply as possible before backtracking.
+
+Characteristics:
+
+- Recursive traversal
+- Deterministic branch ordering
+- Useful for structural exploration
 
 ---
 
@@ -221,6 +254,12 @@ Requirements:
 - Weighted graph support
 - No negative edge weights
 
+Features:
+
+- Distance tracking
+- Path reconstruction
+- Deterministic node settlement
+
 ---
 
 ## Bellman-Ford
@@ -231,6 +270,7 @@ Features:
 
 - Supports negative weights
 - Detects reachable negative cycles
+- Distance relaxation visualization
 
 ---
 
@@ -242,19 +282,25 @@ Requirements:
 
 - Undirected graph
 
+Features:
+
+- Deterministic edge selection
+- MST weight calculation
+- Tree visualization
+
 ---
 
 # Traversal Engine
 
 Traversal execution is separated from rendering.
 
-Algorithms generate traversal plans composed of discrete steps.
+Algorithms generate traversal plans composed of discrete animation steps.
 
 Example:
 
 ```js
 {
-    type: "discover",
+    type: "visit",
     nodeId: "n:123",
     edgeId: "e:a--b"
 }
@@ -267,7 +313,7 @@ Example:
 | Step     | Meaning                   |
 |:---------|:--------------------------|
 | visit    | Node processing           |
-| discover | Node reached through edge |
+| active   | Edge traversal/discovery  |
 
 ---
 
@@ -280,6 +326,7 @@ Example:
 - Traversal reset
 - Distance tracking
 - Final path reconstruction
+- Full-speed execution when delay is zero
 
 ---
 
@@ -468,6 +515,39 @@ graph-visualizer/
 
 ---
 
+# Design Principles
+
+## Deterministic Behavior
+
+Traversal ordering is intentionally deterministic wherever possible.
+
+Neighbor ordering is stable and repeatable.
+
+---
+
+## Single Responsibility
+
+Classes own their own logic:
+
+- Graph owns graph logic
+- Traversals own traversal logic
+- Nodes and edges own rendering
+- GraphController owns UI coordination
+
+---
+
+## Top-to-Bottom Readability
+
+The file is organized so readers encounter systems before they are used.
+
+---
+
+## Minimal Duplication
+
+Shared traversal behavior is centralized in reusable traversal base classes.
+
+---
+
 # Limitations
 
 - No backend persistence
@@ -475,6 +555,8 @@ graph-visualizer/
 - Large graphs may reduce performance
 - No automatic layout algorithms
 - Canvas renderer is immediate-mode only
+- No multi-edge support
+- No self-loop rendering
 
 ---
 
@@ -485,9 +567,10 @@ graph-visualizer/
 - PNG export
 - Additional graph algorithms
 - Graph statistics panel
-- Multi-edge support
+- Multi-edge rendering
 - Self-loop rendering
 - WebGL renderer
+- Touch/mobile interaction improvements
 
 ---
 
