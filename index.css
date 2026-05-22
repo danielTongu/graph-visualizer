@@ -274,7 +274,6 @@ button {
 }
 
 /* Traverse panel */
-
 #traversal-output {
     display: block;
     min-height: 85px;
@@ -287,7 +286,6 @@ button {
 }
 
 /* Graph editor */
-
 #graph-editor {
     padding: var(--space-xl);
     background: var(--panel-secondary);
@@ -338,11 +336,11 @@ button {
             background: var(--selected);
         }
 
-        &[data-text="Active"] > span {
+        &[data-text="Pending"] > span {
             background: var(--warning);
         }
 
-        &[data-text="Visited"] > span {
+        &[data-text="Explored"] > span {
             background: var(--success);
         }
 
