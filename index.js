@@ -2,15 +2,57 @@
 
 /**
  * Stores transient visual state for a graph node or edge.
- * RenderState only controls the presentation state used during rendering and traversal visualization.
+ * RenderState only controls a presentation state used during rendering and traversal visualization.
  */
 class RenderState {
+
+    static STYLE_BASE = Object.freeze({
+        fill: "#1e293b",
+        stroke: "#64748b",
+        lineWidth: 2
+    });
+
+    static STYLE_OVERRIDES = Object.freeze({
+        discovered: Object.freeze({
+            fill: "#78350f",
+            stroke: "#f89d00",
+            lineWidth: 1
+        }),
+
+        exploring: Object.freeze({
+            fill: "#08130d",
+            stroke: "#166534"
+        }),
+
+        explored: Object.freeze({
+            fill: "#166534",
+            stroke: "#4ade80",
+            lineWidth: 3
+        }),
+
+        path: Object.freeze({
+            fill: "#f87171",
+            stroke: "#a80000",
+            lineWidth: 4
+        }),
+
+        selected: Object.freeze({
+            fill: "#4c1d95",
+            stroke: "#c084fc"
+        }),
+
+        hovered: Object.freeze({
+            fill: "#c084fc",
+            stroke: "#4c1d95"
+        })
+    });
 
     #state = {
         hovered: false,
         selected: false,
-        active: false,
-        visited: false,
+        discovered: false,
+        exploring: false,
+        explored: false,
         path: false
     };
 
@@ -19,18 +61,13 @@ class RenderState {
      *
      * @param {string} key - State flag name.
      * @param {boolean|null} value - New value, or null to read.
-     * @returns {boolean|undefined} Current value when reading.
+     * @returns {boolean} The current value of the flag.
      */
-    #stateValue(key, value) {
-        let result;
-
-        if (value === null) {
-            result = this.#state[key];
-        } else {
+    #stateValue(key, value = null) {
+        if (value !== null) {
             this.#state[key] = Boolean(value);
         }
-
-        return result;
+        return this.#state[key];
     }
 
     /**
@@ -44,7 +81,7 @@ class RenderState {
     }
 
     /**
-     * Read or update the selected state.
+     * Read or update a selected state.
      *
      * @param {boolean|null} value - New selected state, or null to read.
      * @returns {boolean|undefined} Current selected state when reading.
@@ -54,27 +91,37 @@ class RenderState {
     }
 
     /**
-     * Read or update active traversal state.
+     * Read or update discovered traversal state.
      *
-     * @param {boolean|null} value - New active state, or null to read.
-     * @returns {boolean|undefined} Current active state when reading.
+     * @param {boolean|null} value - Newly discovered state, or null to read.
+     * @returns {boolean|undefined} Current discovered state when reading.
      */
-    active(value = null) {
-        return this.#stateValue("active", value);
+    discovered(value = null) {
+        return this.#stateValue("discovered", value);
     }
 
     /**
-     * Read or update visited traversal state.
+     * Read or update exploring traversal state.
      *
-     * @param {boolean|null} value - New visited state, or null to read.
-     * @returns {boolean|undefined} Current visited state when reading.
+     * @param {boolean|null} value - New exploring state, or null to read.
+     * @returns {boolean|undefined} Current exploring state when reading.
      */
-    visited(value = null) {
-        return this.#stateValue("visited", value);
+    exploring(value = null) {
+        return this.#stateValue("exploring", value);
     }
 
     /**
-     * Read or update the final traversal path state.
+     * Read or update explored traversal state.
+     *
+     * @param {boolean|null} value - New explored state, or null to read.
+     * @returns {boolean|undefined} Current explored state when reading.
+     */
+    explored(value = null) {
+        return this.#stateValue("explored", value);
+    }
+
+    /**
+     * Read or update a final traversal path state.
      *
      * @param {boolean|null} value - New path state, or null to read.
      * @returns {boolean|undefined} Current path state when reading.
@@ -84,18 +131,41 @@ class RenderState {
     }
 
     /**
-     * Clear active traversal state.
+     * Resolve the active draw style for the current render state.
+     *
+     * State precedence (highest wins):
+     * discovered < explored < path < selected < hovered < exploring
+     *
+     * @returns {object} Active draw style.
      */
-    clearActive() {
-        this.#state.active = false;
+    getDrawStyle() {
+        const style = Object.assign({}, RenderState.STYLE_BASE);
+        const stateOrder = ["discovered", "explored", "path", "selected", "hovered", "exploring"];
+
+        for (let i = 0; i < stateOrder.length; i += 1) {
+            const stateName = stateOrder[i];
+            if (this.#state[stateName]) {
+                Object.assign(style, RenderState.STYLE_OVERRIDES[stateName]);
+            }
+        }
+
+        return style;
+    }
+
+    /**
+     * Clear temporary traversal focus state.
+     */
+    clearExploring() {
+        this.#state.exploring = false;
     }
 
     /**
      * Clear traversal-related visual state.
      */
     clearTraversal() {
-        this.#state.active = false;
-        this.#state.visited = false;
+        this.#state.discovered = false;
+        this.#state.exploring = false;
+        this.#state.explored = false;
         this.#state.path = false;
     }
 }
@@ -164,42 +234,8 @@ class Geometry {
 class Node {
 
     static DEFAULT_RADIUS = 17;
-
-    static STYLE_DEFAULT = Object.freeze({
-        fill: "#1e293b",
-        stroke: "#64748b",
-        lineWidth: 2
-    });
-
-    static STYLE_VISITED = Object.freeze({
-        fill: "#14532d",
-        stroke: "#4ade80",
-        lineWidth: 3
-    });
-
-    static STYLE_ACTIVE = Object.freeze({
-        fill: "#78350f",
-        stroke: "#f59e0b",
-        lineWidth: 4
-    });
-
-    static STYLE_PATH = Object.freeze({
-        fill: "#7f1d1d",
-        stroke: "#f87171",
-        lineWidth: 3
-    });
-
-    static STYLE_HOVERED = Object.freeze({
-        fill: "#22d3ee",
-        stroke: "#164e63",
-        lineWidth: 3
-    });
-
-    static STYLE_SELECTED = Object.freeze({
-        fill: "#818cf8",
-        stroke: "#312e81",
-        lineWidth: 5
-    });
+    static LABEL_FONT = "bold 16px Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif";
+    static BADGE_FONT = "9px Inter, Arial, sans-serif";
 
     /**
      * Create a node.
@@ -210,23 +246,13 @@ class Node {
      * @param {number} y - World y coordinate.
      * @param {number|string|null|undefined} radius - Optional radius override.
      */
-    constructor(id, label, x, y, radius = null) {
+    constructor(id, label, x, y, radius) {
         this.id = String(id);
         this.label = String(label);
         this.x = Number(x);
         this.y = Number(y);
         this.radius = Node.normalizeRadius(radius);
         this.renderState = new RenderState();
-    }
-
-    /**
-     * Create a node from serialized graph data.
-     *
-     * @param {object} data - Serialized node data.
-     * @returns {Node} Node.
-     */
-    static fromJSON(data) {
-        return new Node(data.id, data.label, data.x, data.y, data.radius);
     }
 
     /**
@@ -252,34 +278,6 @@ class Node {
         if (normalized !== null) {
             Node.DEFAULT_RADIUS = normalized;
         }
-    }
-
-    /**
-     * Resolve the active draw style for a render state.
-     *
-     * @param {RenderState} state - Render state.
-     * @returns {object} Active draw style.
-     */
-    static getDrawStyle(state) {
-        let style = Node.STYLE_DEFAULT;
-
-        if (state.visited()) {
-            style = Node.STYLE_VISITED;
-        }
-        if (state.active()) {
-            style = Node.STYLE_ACTIVE;
-        }
-        if (state.path()) {
-            style = Node.STYLE_PATH;
-        }
-        if (state.hovered()) {
-            style = Node.STYLE_HOVERED;
-        }
-        if (state.selected()) {
-            style = Node.STYLE_SELECTED;
-        }
-
-        return style;
     }
 
     /**
@@ -342,13 +340,7 @@ class Node {
      * @returns {number} Effective node radius.
      */
     getRadius() {
-        let radius = Node.DEFAULT_RADIUS;
-
-        if (this.radius !== null) {
-            radius = this.radius;
-        }
-
-        return radius;
+        return this.radius !== null ? this.radius : Node.DEFAULT_RADIUS;
     }
 
     /**
@@ -368,8 +360,8 @@ class Node {
      * @param {CanvasRenderingContext2D} ctx - Canvas context.
      * @param {number|undefined} distance - Optional traversal distance.
      */
-    draw(ctx, distance = undefined) {
-        const style = Node.getDrawStyle(this.renderState);
+    draw(ctx, distance) {
+        const style = this.renderState.getDrawStyle();
 
         this.#drawNodeCircle(ctx, style);
         this.#drawNodeLabel(ctx);
@@ -405,7 +397,7 @@ class Node {
     #drawNodeLabel(ctx) {
         ctx.save();
         ctx.fillStyle = "#ffffff";
-        ctx.font = "bold 16px Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif";
+        ctx.font = Node.LABEL_FONT;
         ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
         ctx.shadowBlur = 4;
         ctx.shadowOffsetX = 0;
@@ -443,7 +435,7 @@ class Node {
      * @returns {string} Badge label.
      */
     #formatDistanceLabel(distance) {
-        return distance === Infinity ? "∞" : String(distance);
+        return distance === Infinity ? "\u221E" : String(distance);
     }
 
     /**
@@ -458,8 +450,8 @@ class Node {
         return {
             x: this.x - width / 2,
             y: this.y - this.getRadius() - 20,
-            width,
-            height,
+            width: width,
+            height: height,
             radius: 6
         };
     }
@@ -475,12 +467,37 @@ class Node {
 
         if (typeof ctx.roundRect === "function") {
             ctx.roundRect(badge.x, badge.y, badge.width, badge.height, badge.radius);
-            ctx.fill();
-            ctx.stroke();
         } else {
-            ctx.fillRect(badge.x, badge.y, badge.width, badge.height);
-            ctx.strokeRect(badge.x, badge.y, badge.width, badge.height);
+            this.#drawRoundedRectPolyfill(ctx, badge);
         }
+
+        ctx.fill();
+        ctx.stroke();
+    }
+
+    /**
+     * Polyfill for CanvasRenderingContext2D.roundRect.
+     *
+     * @param {CanvasRenderingContext2D} ctx - Canvas context.
+     * @param {object} badge - Badge bounds with radius property.
+     */
+    #drawRoundedRectPolyfill(ctx, badge) {
+        const x = badge.x;
+        const y = badge.y;
+        const w = badge.width;
+        const h = badge.height;
+        const r = badge.radius;
+
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
     }
 
     /**
@@ -492,7 +509,7 @@ class Node {
      */
     #drawDistanceBadgeText(ctx, label, badge) {
         ctx.fillStyle = "#f8fafc";
-        ctx.font = "9px Inter, Arial, sans-serif";
+        ctx.font = Node.BADGE_FONT;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(label, this.x, badge.y + badge.height / 2);
@@ -508,6 +525,7 @@ class Edge {
     static HIT_TOLERANCE = 8;
     static ARROW_SIZE = 10;
     static ARROW_ANGLE = Math.PI / 6;
+    static WEIGHT_FONT = "8px Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif";
 
     /**
      * Create an edge.
@@ -518,21 +536,15 @@ class Edge {
      * @param {number|string} weight - Edge weight.
      */
     constructor(id, from, to, weight = 1) {
+        if (weight === undefined) {
+            weight = 1;
+        }
+
         this.id = String(id);
         this.from = String(from);
         this.to = String(to);
         this.weight = Edge.normalizeWeight(weight);
         this.renderState = new RenderState();
-    }
-
-    /**
-     * Create an edge from serialized graph data.
-     *
-     * @param {object} data - Serialized edge data.
-     * @returns {Edge} Edge.
-     */
-    static fromJSON(data) {
-        return new Edge(data.id, data.from, data.to, data.weight);
     }
 
     /**
@@ -590,9 +602,10 @@ class Edge {
     containsPoint(x, y, graph) {
         const endpoints = this.#getEndpoints(graph);
         let hit = false;
+        let distance;
 
         if (endpoints !== null) {
-            const distance = Geometry.distanceToSegment(
+            distance = Geometry.distanceToSegment(
                 x,
                 y,
                 endpoints.fromNode.x,
@@ -617,14 +630,13 @@ class Edge {
         const endpoints = this.#getEndpoints(graph);
 
         if (endpoints !== null) {
-            const style = Node.getDrawStyle(this.renderState);
+            const style = this.renderState.getDrawStyle();
 
             this.#drawEdgeLine(ctx, endpoints.fromNode, endpoints.toNode, style);
 
             if (graph.directed) {
                 this.#drawDirectionArrow(ctx, endpoints.fromNode, endpoints.toNode, style);
             }
-
             if (graph.weighted) {
                 this.#drawWeightLabel(ctx, endpoints.fromNode, endpoints.toNode, style);
             }
@@ -640,11 +652,11 @@ class Edge {
     #getEndpoints(graph) {
         const fromNode = graph.getNodeById(this.from);
         const toNode = graph.getNodeById(this.to);
-        return (fromNode && toNode) ? {fromNode, toNode} : null;
+        return (fromNode && toNode) ? {fromNode: fromNode, toNode: toNode} : null;
     }
 
     /**
-     * Draw the main edge line between two nodes.
+     * Draw the main edge line between two nodes, trimmed to node borders.
      *
      * @param {CanvasRenderingContext2D} ctx - Canvas context.
      * @param {Node} fromNode - Source node.
@@ -652,10 +664,16 @@ class Edge {
      * @param {object} style - Active render style.
      */
     #drawEdgeLine(ctx, fromNode, toNode, style) {
+        const angle = Math.atan2(toNode.y - fromNode.y, toNode.x - fromNode.x);
+        const startX = fromNode.x + Math.cos(angle) * fromNode.getRadius();
+        const startY = fromNode.y + Math.sin(angle) * fromNode.getRadius();
+        const endX = toNode.x - Math.cos(angle) * toNode.getRadius();
+        const endY = toNode.y - Math.sin(angle) * toNode.getRadius();
+
         ctx.save();
         ctx.beginPath();
-        ctx.moveTo(fromNode.x, fromNode.y);
-        ctx.lineTo(toNode.x, toNode.y);
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
         ctx.strokeStyle = style.stroke;
         ctx.lineWidth = style.lineWidth;
         ctx.stroke();
@@ -685,7 +703,7 @@ class Edge {
     }
 
     /**
-     * Draw the edge weight label at the midpoint between endpoint nodes.
+     * Draw the edge weight label at the midpoint with a background pill.
      *
      * @param {CanvasRenderingContext2D} ctx - Canvas context.
      * @param {Node} fromNode - Source node.
@@ -694,14 +712,39 @@ class Edge {
      */
     #drawWeightLabel(ctx, fromNode, toNode, style) {
         const midpoint = this.#getMidpoint(fromNode, toNode);
+        const label = String(this.weight);
+        const padding = 2;
 
         ctx.save();
-        ctx.fillStyle = style.fill;
-        ctx.font = "12px Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif";
-        ctx.shadowColor = "rgb(0, 0, 0)";
+        ctx.font = Edge.WEIGHT_FONT;
+
+        const metrics = ctx.measureText(label);
+        const textWidth = metrics.width;
+        const textHeight = 12;
+        const bgX = midpoint.x - textWidth / 2 - padding;
+        const bgY = midpoint.y - textHeight / 2 - padding;
+        const bgWidth = textWidth + padding * 2;
+        const bgHeight = textHeight + padding * 2;
+        const isHighlighted = this.renderState.selected() || this.renderState.path();
+
+        ctx.fillStyle = isHighlighted ? "black" : "rgba(0, 0, 0, 0.5)";
+        ctx.strokeStyle = style.stroke;
+        ctx.lineWidth = 0.5;
+
+        if (typeof ctx.roundRect === "function") {
+            ctx.beginPath();
+            ctx.roundRect(bgX, bgY, bgWidth, bgHeight, 4);
+            ctx.fill();
+            ctx.stroke();
+        } else {
+            ctx.fillRect(bgX, bgY, bgWidth, bgHeight);
+            ctx.strokeRect(bgX, bgY, bgWidth, bgHeight);
+        }
+
+        ctx.fillStyle = this.renderState.hovered() ? style.fill : style.stroke;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(String(this.weight), midpoint.x, midpoint.y);
+        ctx.fillText(label, midpoint.x, midpoint.y);
         ctx.restore();
     }
 
@@ -718,8 +761,8 @@ class Edge {
         const tipY = toNode.y - Math.sin(angle) * toNode.getRadius();
 
         return {
-            tipX,
-            tipY,
+            tipX: tipX,
+            tipY: tipY,
             leftX: tipX - Edge.ARROW_SIZE * Math.cos(angle - Edge.ARROW_ANGLE),
             leftY: tipY - Edge.ARROW_SIZE * Math.sin(angle - Edge.ARROW_ANGLE),
             rightX: tipX - Edge.ARROW_SIZE * Math.cos(angle + Edge.ARROW_ANGLE),
@@ -743,40 +786,160 @@ class Edge {
 }
 
 /**
- * Core graph data structure.
- *
- * The graph owns:
- * - node and edge storage
- * - render ordering
- * - import/export
- * - undo/redo history
- * - graph mutation operations
- * - graph-level validation and queries
+ * Fixed-capacity double-ended stack used for undo and redo history.
+ * Automatically discards the oldest entries when capacity is exceeded.
  */
-class Graph {
-
-    #undoStack = [];
-    #redoStack = [];
-    #historyLimit = 100;
-    #historyLocked = false;
+class Deque {
+    #items = {};
+    #front = 0;
+    #back = 0;
+    #size = 0;
+    #maxSize;
 
     /**
-     * Create an empty graph.
+     * Create a fixed-capacity deque.
+     *
+     * @param {number} maxSize - Maximum number of stored items.
      */
-    constructor() {
+    constructor(maxSize = 100) {
+        this.#maxSize = maxSize;
+    }
+
+    /**
+     * @returns {number} Current stored item count.
+     */
+    get length() {
+        return this.#size;
+    }
+
+    /**
+     * Push an item onto the back of the deque.
+     * Removes items from the front when the deque exceeds capacity.
+     *
+     * @param {*} item - Item to store.
+     */
+    push(item) {
+        this.#items[this.#back] = item;
+        this.#back++;
+        this.#size++;
+
+        // Auto-trim from front if over capacity
+        while (this.#size > this.#maxSize) {
+            delete this.#items[this.#front];
+            this.#front++;
+            this.#size--;
+        }
+    }
+
+    /**
+     * Remove and return the newest item.
+     *
+     * @returns {*|undefined} Removed item, or undefined when empty.
+     */
+    pop() {
+        if (this.#size === 0) return undefined;
+
+        this.#back--;
+        this.#size--;
+        const item = this.#items[this.#back];
+        delete this.#items[this.#back];
+        return item;
+    }
+
+    /**
+     * Remove all items and reset deque indexes.
+     */
+    clear() {
+        this.#items = {};
+        this.#front = 0;
+        this.#back = 0;
+        this.#size = 0;
+    }
+}
+
+
+/**
+ * Stores graph nodes, edges, indexes, rendering order, and undo/redo history.
+ * Owns graph mutation, serialization, import/export, hit testing, and drawing delegation.
+ */
+class Graph {
+    #undoStack;
+    #redoStack;
+    #historyLocked = false;
+    #connectionMap = new Map();
+    #edgesByNode = new Map();
+
+    /**
+     * Creates a graph instance.
+     *
+     * @param {Object} [options={}] - Graph configuration.
+     * @param {number} [options.historyLimit=25] - Maximum undo/redo history entries.
+     */
+    constructor(options = {}) {
+        const historyLimit = Graph.#normalizeHistoryLimit(options.historyLimit);
+
+        this.#undoStack = new Deque(historyLimit);
+        this.#redoStack = new Deque(historyLimit);
+
+        /**
+         * Map of node id to Node instance.
+         *
+         * @type {Map<string, Node>}
+         */
         this.nodeMap = new Map();
+
+        /**
+         * Map of edge id to Edge instance.
+         *
+         * @type {Map<string, Edge>}
+         */
         this.edgeMap = new Map();
+
+        /**
+         * Node ids in render/insertion order.
+         *
+         * @type {string[]}
+         */
         this.nodeOrder = [];
+
+        /**
+         * Edge ids in render/insertion order.
+         *
+         * @type {string[]}
+         */
         this.edgeOrder = [];
+
+        /**
+         * Whether graph edges are directional.
+         *
+         * @type {boolean}
+         */
         this.directed = false;
+
+        /**
+         * Whether graph-edge weights are displayed and used.
+         *
+         * @type {boolean}
+         */
         this.weighted = false;
     }
 
     /**
-     * Load sample graph data from the sample graph JSON file.
+     * Normalizes the history limit option.
      *
-     * @returns {Promise<object>} Serialized graph data.
-     * @throws {Error} When the sample graph file cannot be loaded.
+     * @param {*} limit - Candidate history limit.
+     * @returns {number} Positive integer history limit.
+     */
+    static #normalizeHistoryLimit(limit) {
+        const parsed = Number(limit);
+        return Number.isInteger(parsed) && parsed > 0 ? parsed : 25;
+    }
+
+    /**
+     * Loads bundled sample graph JSON data.
+     *
+     * @returns {Promise<Object>} Parsed sample graph data.
+     * @throws {Error} When the sample data request fails.
      */
     static async loadSampleAsync() {
         const response = await fetch("./sample-graph-data.json");
@@ -789,9 +952,9 @@ class Graph {
     }
 
     /**
-     * Create a stable unique node id.
+     * Creates a unique node id.
      *
-     * @returns {string} Node id.
+     * @returns {string} Node id prefixed with `n:`.
      */
     static createNodeId() {
         return (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function")
@@ -800,12 +963,12 @@ class Graph {
     }
 
     /**
-     * Create a deterministic edge id from node endpoints.
+     * Creates an edge id for the supplied endpoints.
      *
-     * @param {string} from - Source node id.
-     * @param {string} to - Target node id.
-     * @param {boolean} directed - Whether the graph is directed.
-     * @returns {string} Edge id.
+     * @param {string|number} from - Source node id.
+     * @param {string|number} to - Target node id.
+     * @param {boolean} directed - Whether the edge is directed.
+     * @returns {string} Edge id prefixed with `e:`.
      */
     static createEdgeId(from, to, directed) {
         const fromId = String(from);
@@ -814,32 +977,30 @@ class Graph {
     }
 
     /**
-     * Create a deterministic undirected edge id.
+     * Creates a stable undirected edge id.
      *
-     * @param {string} firstId - First node id.
-     * @param {string} secondId - Second node id.
-     * @returns {string} Edge id.
+     * @param {string|number} firstId - First endpoint id.
+     * @param {string|number} secondId - Second endpoint id.
+     * @returns {string} Undirected edge id.
      */
     static #createUndirectedEdgeId(firstId, secondId) {
-        const ordered = [firstId, secondId].sort();
+        const ordered = [String(firstId), String(secondId)].sort();
         return `e:${ordered[0]}--${ordered[1]}`;
     }
 
     /**
-     * Create a fallback unique id.
+     * Creates a fallback unique id when crypto.randomUUID is unavailable.
      *
      * @returns {string} Fallback id.
      */
     static #createFallbackId() {
-        const time = Date.now().toString(36);
-        const random = Graph.#randomString(10);
-        return `${time}-${random}`;
+        return `${Date.now().toString(36)}-${Graph.#randomString(10)}`;
     }
 
     /**
-     * Create a random lowercase alphanumeric string.
+     * Creates a random lowercase alphanumeric string.
      *
-     * @param {number} length - String length.
+     * @param {number} length - Desired string length.
      * @returns {string} Random string.
      */
     static #randomString(length) {
@@ -847,32 +1008,100 @@ class Graph {
         let result = "";
 
         for (let i = 0; i < length; i += 1) {
-            const index = Math.floor(Math.random() * chars.length);
-            result += chars.charAt(index);
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
         }
 
         return result;
     }
 
-    //----------------------------- History ---------------------------------
+    /**
+     * Creates a normalized connection key for edge lookup.
+     *
+     * @param {string|number} from - Source node id.
+     * @param {string|number} to - Target node id.
+     * @returns {string} Connection key.
+     */
+    #createConnectionKey(from, to) {
+        const fromId = String(from);
+        const toId = String(to);
+        let key;
+
+        if (this.directed) {
+            key = `${fromId}->${toId}`;
+        } else {
+            key = [fromId, toId].sort().join("--");
+        }
+
+        return key;
+    }
 
     /**
-     * Save the current graph snapshot for undo.
-     * Redo history is cleared whenever a new history entry is created.
-     * History recording is skipped while restoring snapshots.
+     * Adds a node to graph indexes and render order.
+     *
+     * @param {Node} node - Node to index.
+     * @returns {void}
      */
-    saveHistory() {
-        if (!this.#historyLocked) {
-            this.#undoStack.push(this.export());
-            this.#redoStack.length = 0;
-            this.#trimUndoHistory();
+    #indexNode(node) {
+        this.nodeMap.set(node.id, node);
+        this.nodeOrder.push(node.id);
+        this.#edgesByNode.set(node.id, new Set());
+    }
+
+    /**
+     * Adds an edge to graph indexes and render order.
+     *
+     * @param {Edge} edge - Edge to index.
+     * @returns {void}
+     */
+    #indexEdge(edge) {
+        const connectionKey = this.#createConnectionKey(edge.from, edge.to);
+
+        this.edgeMap.set(edge.id, edge);
+        this.edgeOrder.push(edge.id);
+        this.#connectionMap.set(connectionKey, edge.id);
+
+        this.#edgesByNode.get(edge.from).add(edge.id);
+        this.#edgesByNode.get(edge.to).add(edge.id);
+    }
+
+    /**
+     * Removes an edge from lookup indexes.
+     *
+     * @param {Edge} edge - Edge to remove from indexes.
+     * @returns {void}
+     */
+    #unindexEdge(edge) {
+        const fromEdges = this.#edgesByNode.get(edge.from);
+        const toEdges = this.#edgesByNode.get(edge.to);
+
+        this.#connectionMap.delete(this.#createConnectionKey(edge.from, edge.to));
+        this.edgeMap.delete(edge.id);
+
+        if (fromEdges) {
+            fromEdges.delete(edge.id);
+        }
+
+        if (toEdges) {
+            toEdges.delete(edge.id);
         }
     }
 
     /**
-     * Undo the most recent graph mutation.
+     * Saves the current graph snapshot to undo history.
      *
-     * @returns {boolean} True when undo succeeded.
+     * @returns {void}
+     */
+    saveHistory() {
+        if (!this.#historyLocked) {
+            this.#undoStack.push(this.export());
+            this.#redoStack.clear();
+        }
+    }
+
+    /**
+     * Restores the previous graph snapshot.
+     *
+     * @returns {boolean} True when the graph changed.
      */
     undo() {
         const changed = this.#undoStack.length > 0;
@@ -886,9 +1115,9 @@ class Graph {
     }
 
     /**
-     * Redo the most recently undone graph mutation.
+     * Restores the next graph snapshot after undo.
      *
-     * @returns {boolean} True when redo succeeded.
+     * @returns {boolean} True when the graph changed.
      */
     redo() {
         const changed = this.#redoStack.length > 0;
@@ -902,17 +1131,20 @@ class Graph {
     }
 
     /**
-     * Clear undo and redo history.
+     * Clears undo and redo history.
+     *
+     * @returns {void}
      */
     clearHistory() {
-        this.#undoStack.length = 0;
-        this.#redoStack.length = 0;
+        this.#undoStack.clear();
+        this.#redoStack.clear();
     }
 
     /**
-     * Restore a graph snapshot without recording additional history.
+     * Restores a graph snapshot without recording another history entry.
      *
-     * @param {object} snapshot - Serialized graph snapshot.
+     * @param {Object} snapshot - Exported graph snapshot.
+     * @returns {void}
      */
     #restoreSnapshot(snapshot) {
         try {
@@ -924,32 +1156,24 @@ class Graph {
     }
 
     /**
-     * Trim undo history to the configured history limit.
-     */
-    #trimUndoHistory() {
-        if (this.#undoStack.length > this.#historyLimit) {
-            this.#undoStack.shift();
-        }
-    }
-
-    //----------------------------- Lifecycle ------------------------------------
-
-    /**
-     * Remove every node and edge without recording history.
-     * Graph configuration flags are preserved.
+     * Removes all nodes, edges, and lookup indexes.
+     *
+     * @returns {void}
      */
     reset() {
         this.nodeMap.clear();
         this.edgeMap.clear();
+        this.#connectionMap.clear();
+        this.#edgesByNode.clear();
         this.nodeOrder.length = 0;
         this.edgeOrder.length = 0;
     }
 
     /**
-     * Load serialized graph data and clear undo history.
-     * History recording is temporarily disabled while importing.
+     * Loads graph data and clears history.
      *
-     * @param {object} data - Serialized graph data.
+     * @param {Object} data - Serialized graph data.
+     * @returns {void}
      */
     load(data) {
         try {
@@ -961,287 +1185,306 @@ class Graph {
         }
     }
 
-    //----------------------------- Graph queries --------------------------------
-
     /**
-     * Check whether the graph contains at least one negative-weight edge.
+     * Checks whether any edge has a negative weight.
      *
-     * @returns {boolean} True when a negative edge exists.
+     * @returns {boolean} True when at least one edge has a negative weight.
      */
     hasNegativeWeight() {
         let hasNegative = false;
 
-        this.edgeMap.forEach(function inspect(edge) {
-            if (Number(edge.weight) < 0) {
+        for (const edge of this.edgeMap.values()) {
+            if (edge.weight < 0) {
                 hasNegative = true;
+                break;
             }
-        });
+        }
 
         return hasNegative;
     }
 
-    //----------------------------- Nodes ----------------------------------
-
     /**
-     * Create and add a node to the graph.
-     * The new node is appended to render order.
+     * Adds a node to the graph.
      *
-     * @param {number} x - World x coordinate.
-     * @param {number} y - World y coordinate.
-     * @param {string|null} label - Optional node label.
-     * @param {number|string|null|undefined} radius - Optional radius override.
+     * @param {number} x - Node x-coordinate.
+     * @param {number} y - Node y-coordinate.
+     * @param {string|number|null} [label=null] - Optional node label.
+     * @param {number|null} [radius=null] - Optional node radius.
      * @returns {Node} Created node.
      */
     addNode(x, y, label = null, radius = null) {
         this.saveHistory();
-        const node = new Node(Graph.createNodeId(), this.#resolveNodeLabel(label), x, y, radius);
-        this.#storeNode(node);
+
+        const node = new Node(
+            Graph.createNodeId(),
+            this.#resolveNodeLabel(label),
+            x,
+            y,
+            radius
+        );
+
+        this.#indexNode(node);
 
         return node;
     }
 
     /**
-     * Remove a node and every connected edge.
+     * Removes a node and all connected edges.
      *
-     * @param {string} id - Node id.
+     * @param {string|number} id - Node id.
+     * @returns {void}
      */
     removeNode(id) {
         const nodeId = String(id);
 
         if (this.nodeMap.has(nodeId)) {
             this.saveHistory();
-            this.nodeMap.delete(nodeId);
-            this.#removeNodeFromOrder(nodeId);
             this.#removeEdgesConnectedToNode(nodeId);
+            this.nodeMap.delete(nodeId);
+            this.#edgesByNode.delete(nodeId);
+            this.#removeNodeFromOrder(nodeId);
         }
     }
 
     /**
-     * Get a node by id.
+     * Gets a node by id.
      *
-     * @param {string} id - Node id.
-     * @returns {Node|null} Node, or null when missing.
+     * @param {string|number} id - Node id.
+     * @returns {Node|null} Matching node, or null.
      */
     getNodeById(id) {
         return this.nodeMap.get(String(id)) || null;
     }
 
     /**
-     * Resolve the label for a newly created node.
+     * Resolves a node label.
      *
-     * @param {string|null} label - Optional explicit label.
-     * @returns {string} Resolved node label.
+     * @param {string|number|null} label - Candidate label.
+     * @returns {string} Resolved label.
      */
     #resolveNodeLabel(label) {
-        let resolvedLabel;
-
-        if (label === null) {
-            resolvedLabel = String(this.nodeOrder.length);
-        } else {
-            resolvedLabel = String(label);
-        }
-
-        return resolvedLabel;
+        return label === null ? String(this.nodeOrder.length) : String(label);
     }
 
     /**
-     * Store a node in lookup storage and render order.
-     *
-     * @param {Node} node - Node.
-     */
-    #storeNode(node) {
-        this.nodeMap.set(node.id, node);
-        this.nodeOrder.push(node.id);
-    }
-
-    /**
-     * Remove a node id from render order.
+     * Removes a node id from render order.
      *
      * @param {string} nodeId - Node id.
+     * @returns {void}
      */
     #removeNodeFromOrder(nodeId) {
-        this.nodeOrder = this.nodeOrder.filter(function keep(id) {
-            return id !== nodeId;
-        });
+        const filtered = [];
+
+        for (let i = 0; i < this.nodeOrder.length; i += 1) {
+            if (this.nodeOrder[i] !== nodeId) {
+                filtered.push(this.nodeOrder[i]);
+            }
+        }
+
+        this.nodeOrder = filtered;
     }
 
     /**
-     * Remove every edge connected to a node.
+     * Removes all edges connected to a node.
      *
      * @param {string} nodeId - Node id.
+     * @returns {void}
      */
     #removeEdgesConnectedToNode(nodeId) {
-        this.edgeOrder.forEach(function removeConnectedEdge(edgeId) {
-            const edge = this.edgeMap.get(edgeId);
+        const edgeIds = this.#edgesByNode.get(nodeId);
 
-            if (edge && (edge.from === nodeId || edge.to === nodeId)) {
-                this.edgeMap.delete(edgeId);
+        if (edgeIds) {
+            const idsToRemove = Array.from(edgeIds);
+
+            for (let i = 0; i < idsToRemove.length; i += 1) {
+                const edge = this.edgeMap.get(idsToRemove[i]);
+
+                if (edge) {
+                    this.#unindexEdge(edge);
+                }
             }
-        }, this);
 
-        this.#removeMissingEdgesFromOrder();
+            this.#removeMissingEdgesFromOrder();
+        }
     }
 
-    //----------------------------- Edges ----------------------------------
-
     /**
-     * Create and add an edge between two nodes.
+     * Adds an edge between two existing nodes.
      *
-     * Edge creation fails when:
-     * - either node is missing
-     * - endpoints are identical
-     * - the edge already exists
-     *
-     * @param {string} from - Source node id.
-     * @param {string} to - Target node id.
-     * @param {number|string} weight - Edge weight.
-     * @returns {Edge|null} Created edge, or null when creation failed.
+     * @param {string|number} from - Source node id.
+     * @param {string|number} to - Target node id.
+     * @param {number} [weight=1] - Edge weight.
+     * @returns {Edge|null} Created edge, or null when invalid.
      */
     addEdge(from, to, weight = 1) {
         const fromId = String(from);
         const toId = String(to);
-
         let edge = null;
 
         if (this.#canCreateEdge(fromId, toId)) {
             this.saveHistory();
-            edge = new Edge(Graph.createEdgeId(fromId, toId, this.directed), fromId, toId, weight);
-            this.#storeEdge(edge);
+
+            edge = new Edge(
+                Graph.createEdgeId(fromId, toId, this.directed),
+                fromId,
+                toId,
+                weight
+            );
+
+            this.#indexEdge(edge);
         }
 
         return edge;
     }
 
     /**
-     * Remove an edge.
+     * Removes an edge by id.
      *
-     * @param {string} id - Edge id.
+     * @param {string|number} id - Edge id.
+     * @returns {void}
      */
     removeEdge(id) {
-        const edgeId = String(id);
+        const edge = this.edgeMap.get(String(id));
 
-        if (this.edgeMap.has(edgeId)) {
+        if (edge) {
             this.saveHistory();
-            this.edgeMap.delete(edgeId);
-            this.#removeEdgeFromOrder(edgeId);
+            this.#unindexEdge(edge);
+            this.#removeEdgeFromOrder(edge.id);
         }
     }
 
     /**
-     * Check whether an edge already exists between two nodes.
+     * Checks whether an edge exists between two nodes.
      *
-     * @param {string} from - Source node id.
-     * @param {string} to - Target node id.
-     * @returns {boolean} True when the edge exists.
+     * @param {string|number} from - Source node id.
+     * @param {string|number} to - Target node id.
+     * @returns {boolean} True when an edge exists.
      */
     edgeExists(from, to) {
-        const fromId = String(from);
-        const toId = String(to);
-
-        let exists = false;
-
-        this.edgeMap.forEach(function inspect(edge) {
-            if (this.#isSameConnection(edge, fromId, toId)) {
-                exists = true;
-            }
-        }, this);
-
-        return exists;
+        return this.#connectionMap.has(this.#createConnectionKey(from, to));
     }
 
     /**
-     * Get an edge by id.
+     * Gets an edge by id.
      *
-     * @param {string} id - Edge id.
-     * @returns {Edge|null} Edge, or null when missing.
+     * @param {string|number} id - Edge id.
+     * @returns {Edge|null} Matching edge, or null.
      */
     getEdgeById(id) {
         return this.edgeMap.get(String(id)) || null;
     }
 
     /**
-     * Normalize every edge weight to 1.
+     * Sets all edge weights to 1.
+     *
+     * @returns {void}
      */
     normalizeWeights() {
-        this.edgeMap.forEach(function normalize(edge) {
+        for (const edge of this.edgeMap.values()) {
             edge.setWeight(1);
-        });
+        }
     }
 
     /**
-     * Check whether an edge can be created between two nodes.
+     * Checks whether an edge can be created.
      *
      * @param {string} fromId - Source node id.
      * @param {string} toId - Target node id.
-     * @returns {boolean} True when the edge is valid and does not already exist.
+     * @returns {boolean} True when the edge can be created.
      */
     #canCreateEdge(fromId, toId) {
-        return (
-            this.nodeMap.has(fromId) &&
-            this.nodeMap.has(toId) &&
-            fromId !== toId &&
-            !this.edgeExists(fromId, toId)
-        );
-    }
+        let canCreate = true;
 
-    /**
-     * Store an edge in lookup storage and render order.
-     *
-     * @param {Edge} edge - Edge.
-     */
-    #storeEdge(edge) {
-        this.edgeMap.set(edge.id, edge);
-        this.edgeOrder.push(edge.id);
-    }
-
-    /**
-     * Remove an edge id from render order.
-     *
-     * @param {string} edgeId - Edge id.
-     */
-    #removeEdgeFromOrder(edgeId) {
-        this.edgeOrder = this.edgeOrder.filter(function keep(id) {
-            return id !== edgeId;
-        });
-    }
-
-    /**
-     * Remove edge ids from the render order when their edges no longer exist.
-     */
-    #removeMissingEdgesFromOrder() {
-        this.edgeOrder = this.edgeOrder.filter(function keep(edgeId) {
-            return this.edgeMap.has(edgeId);
-        }, this);
-    }
-
-    /**
-     * Check whether an existing edge matches a requested connection.
-     *
-     * @param {Edge} edge - Existing edge.
-     * @param {string} fromId - Requested source node id.
-     * @param {string} toId - Requested target node id.
-     * @returns {boolean} True when the edge matches.
-     */
-    #isSameConnection(edge, fromId, toId) {
-        let same = edge.from === fromId && edge.to === toId;
-
-        if (!same && !this.directed) {
-            same = edge.from === toId && edge.to === fromId;
+        if (fromId === toId) {
+            canCreate = false;
+        } else if (!this.nodeMap.has(fromId) || !this.nodeMap.has(toId)) {
+            canCreate = false;
+        } else if (this.edgeExists(fromId, toId)) {
+            canCreate = false;
         }
 
-        return same;
+        return canCreate;
     }
 
-    //----------------------------- Sorting and lookup ------------------------------
+    /**
+     * Removes an edge id from render order.
+     *
+     * @param {string} edgeId - Edge id.
+     * @returns {void}
+     */
+    #removeEdgeFromOrder(edgeId) {
+        const filtered = [];
+
+        for (let i = 0; i < this.edgeOrder.length; i += 1) {
+            if (this.edgeOrder[i] !== edgeId) {
+                filtered.push(this.edgeOrder[i]);
+            }
+        }
+
+        this.edgeOrder = filtered;
+    }
 
     /**
-     * Compare two adjacency neighbor descriptors.
-     * Weighted graphs compare by edge weight first.
-     * Ties and unweighted graphs compare by destination node label.
+     * Removes stale edge ids from render order.
      *
-     * @param {object} first - First adjacency neighbor.
-     * @param {object} second - Second adjacency neighbor.
-     * @returns {number} Sort result.
+     * @returns {void}
+     */
+    #removeMissingEdgesFromOrder() {
+        const filtered = [];
+
+        for (let i = 0; i < this.edgeOrder.length; i += 1) {
+            if (this.edgeMap.has(this.edgeOrder[i])) {
+                filtered.push(this.edgeOrder[i]);
+            }
+        }
+
+        this.edgeOrder = filtered;
+    }
+
+    /**
+     * Rebuilds all edge ids and indexes after the directed setting changes.
+     *
+     * Edge ids encode direction, so toggling directed/undirected mode requires
+     * regenerating ids and connection keys for every existing edge.
+     *
+     * @returns {void}
+     */
+    rebuildEdgesOnDirectionChange() {
+        const edges = this.#exportEdges();
+
+        this.edgeMap.clear();
+        this.edgeOrder.length = 0;
+        this.#connectionMap.clear();
+
+        for (const edgeIds of this.#edgesByNode.values()) {
+            edgeIds.clear();
+        }
+
+        for (let i = 0; i < edges.length; i += 1) {
+            const rawEdge = edges[i];
+            const edge = new Edge(
+                Graph.createEdgeId(rawEdge.from, rawEdge.to, this.directed),
+                rawEdge.from,
+                rawEdge.to,
+                rawEdge.weight
+            );
+
+            if (this.#canImportEdge(edge)) {
+                this.#indexEdge(edge);
+            }
+        }
+    }
+
+    /**
+     * Compares two neighbor records by edge weight, then by target node.
+     *
+     * @param {Object} first - First neighbor record.
+     * @param {string} first.edgeId - First-edge id.
+     * @param {string} first.to - First target node id.
+     * @param {Object} second - Second neighbor record.
+     * @param {string} second.edgeId - Second-edge id.
+     * @param {string} second.to - Second target node id.
+     * @returns {number} Sort comparison result.
      */
     compareNeighbors(first, second) {
         let result = this.#compareNeighborEdges(first, second);
@@ -1254,11 +1497,11 @@ class Graph {
     }
 
     /**
-     * Find the topmost node containing a world point.
+     * Finds the topmost node containing a point.
      *
-     * @param {number} x - World x coordinate.
-     * @param {number} y - World y coordinate.
-     * @returns {Node|null} Matching node, or null when none is hit.
+     * @param {number} x - Point x-coordinate.
+     * @param {number} y - Point y-coordinate.
+     * @returns {Node|null} Found node, or null.
      */
     findNodeAt(x, y) {
         let foundNode = null;
@@ -1275,11 +1518,11 @@ class Graph {
     }
 
     /**
-     * Find the topmost edge containing a world point.
+     * Finds the topmost edge containing a point.
      *
-     * @param {number} x - World x coordinate.
-     * @param {number} y - World y coordinate.
-     * @returns {Edge|null} Matching edge, or null when none is hit.
+     * @param {number} x - Point x-coordinate.
+     * @param {number} y - Point y-coordinate.
+     * @returns {Edge|null} Found edge, or null.
      */
     findEdgeAt(x, y) {
         let foundEdge = null;
@@ -1296,85 +1539,68 @@ class Graph {
     }
 
     /**
-     * Compare adjacency neighbors by edge weight when the graph is weighted.
+     * Compares two neighbor records by their edge weights.
      *
-     * @param {object} first - First adjacency neighbor.
-     * @param {object} second - Second adjacency neighbor.
-     * @returns {number} Sort result.
+     * @param {Object} first - First neighbor record.
+     * @param {Object} second - Second neighbor record.
+     * @returns {number} Sort comparison result.
      */
     #compareNeighborEdges(first, second) {
         const firstEdge = this.getEdgeById(first.edgeId);
         const secondEdge = this.getEdgeById(second.edgeId);
-
-        let result = 0;
-
-        if (this.weighted && firstEdge && secondEdge) {
-            result = firstEdge.compareTo(secondEdge);
-        }
-
-        return result;
+        return this.weighted && firstEdge && secondEdge ? firstEdge.compareTo(secondEdge) : 0;
     }
 
     /**
-     * Compare adjacency neighbors by destination node label.
+     * Compares two neighbor records by their target nodes.
      *
-     * @param {object} first - First adjacency neighbor.
-     * @param {object} second - Second adjacency neighbor.
-     * @returns {number} Sort result.
+     * @param {Object} first - First neighbor record.
+     * @param {Object} second - Second neighbor record.
+     * @returns {number} Sort comparison result.
      */
     #compareNeighborNodes(first, second) {
         const firstNode = this.getNodeById(first.to);
         const secondNode = this.getNodeById(second.to);
-
-        let result = 0;
-
-        if (firstNode && secondNode) {
-            result = firstNode.compareTo(secondNode);
-        }
-
-        return result;
+        return firstNode && secondNode ? firstNode.compareTo(secondNode) : 0;
     }
 
-    //----------------------------- Rendering ------------------------------
-
     /**
-     * Draw all edges in render order.
+     * Draws all edges in render order.
      *
-     * @param {CanvasRenderingContext2D} ctx - Canvas context.
+     * @param {CanvasRenderingContext2D} ctx - Canvas rendering context.
+     * @returns {void}
      */
     drawEdges(ctx) {
-        this.edgeOrder.forEach(function drawEdge(edgeId) {
-            const edge = this.edgeMap.get(edgeId);
+        for (let i = 0; i < this.edgeOrder.length; i += 1) {
+            const edge = this.edgeMap.get(this.edgeOrder[i]);
 
             if (edge) {
                 edge.draw(ctx, this);
             }
-        }, this);
+        }
     }
 
     /**
-     * Draw all nodes in render order.
+     * Draws all nodes in render order.
      *
-     * @param {CanvasRenderingContext2D} ctx - Canvas context.
-     * @param {App} controller - Controller used to resolve traversal distance badges.
+     * @param {CanvasRenderingContext2D} ctx - Canvas rendering context.
+     * @param {Object} controller - Controller providing traversal distances.
+     * @returns {void}
      */
     drawNodes(ctx, controller) {
-        this.nodeOrder.forEach(function drawNode(nodeId) {
-            const node = this.nodeMap.get(nodeId);
+        for (let i = 0; i < this.nodeOrder.length; i += 1) {
+            const node = this.nodeMap.get(this.nodeOrder[i]);
 
             if (node) {
                 node.draw(ctx, controller.getTraversalDistance(node.id));
             }
-        }, this);
+        }
     }
 
-    //----------------------------- Import and export -----------------------------
-
     /**
-     * Export the graph as plain serializable data.
-     * Render state, traversal state, and undo history are not exported.
+     * Serializes the graph.
      *
-     * @returns {object} Serialized graph data.
+     * @returns {Object} Serialized graph data.
      */
     export() {
         return {
@@ -1386,11 +1612,11 @@ class Graph {
     }
 
     /**
-     * Import serialized graph data.
-     * Existing graph data is cleared before import.
+     * Imports serialized graph data.
      *
-     * @param {object} data - Serialized graph data.
-     * @throws {Error} When data is not an object.
+     * @param {Object} data - Serialized graph data.
+     * @returns {void}
+     * @throws {Error} When graph data is invalid.
      */
     import(data) {
         if (!data || typeof data !== "object") {
@@ -1409,91 +1635,146 @@ class Graph {
     }
 
     /**
-     * Export nodes in render order.
+     * Serializes nodes in render order.
      *
-     * @returns {object[]} Serialized nodes.
+     * @returns {Object[]} Serialized nodes.
      */
     #exportNodes() {
         const nodes = [];
 
-        this.nodeOrder.forEach(function exportNode(id) {
-            const node = this.nodeMap.get(id);
+        for (let i = 0; i < this.nodeOrder.length; i += 1) {
+            const node = this.nodeMap.get(this.nodeOrder[i]);
 
             if (node) {
                 nodes.push(node.toJSON());
             }
-        }, this);
+        }
 
         return nodes;
     }
 
     /**
-     * Export edges in render order.
+     * Serializes edges in render order.
      *
-     * @returns {object[]} Serialized edges.
+     * @returns {Object[]} Serialized edges.
      */
     #exportEdges() {
         const edges = [];
 
-        this.edgeOrder.forEach(function exportEdge(id) {
-            const edge = this.edgeMap.get(id);
+        for (let i = 0; i < this.edgeOrder.length; i += 1) {
+            const edge = this.edgeMap.get(this.edgeOrder[i]);
 
             if (edge) {
                 edges.push(edge.toJSON());
             }
-        }, this);
+        }
 
         return edges;
     }
 
     /**
-     * Import valid nodes from serialized node data.
+     * Imports valid serialized nodes.
      *
-     * @param {object[]|undefined} nodes - Serialized nodes.
+     * @param {Object[]} nodes - Serialized nodes.
+     * @returns {void}
      */
     #importNodes(nodes) {
         if (Array.isArray(nodes)) {
-            nodes.forEach(function importNode(raw) {
-                const node = Node.fromJSON(raw);
+            for (let i = 0; i < nodes.length; i += 1) {
+                const node = this.#createValidNode(nodes[i]);
 
-                if (!this.nodeMap.has(node.id)) {
-                    this.#storeNode(node);
+                if (node && !this.nodeMap.has(node.id)) {
+                    this.#indexNode(node);
                 }
-            }, this);
+            }
         }
     }
 
     /**
-     * Import valid edges from serialized edge data.
+     * Creates a Node instance from serialized data.
      *
-     * @param {object[]|undefined} edges - Serialized edges.
+     * @param {Object} raw - Raw node data.
+     * @returns {Node|null} Valid node, or null.
+     */
+    #createValidNode(raw) {
+        let node = null;
+
+        if (raw && typeof raw === "object") {
+            const id = String(raw.id);
+            const label = raw.label === undefined ? id : String(raw.label);
+            const x = Number(raw.x);
+            const y = Number(raw.y);
+
+            if (id && Number.isFinite(x) && Number.isFinite(y)) {
+                node = new Node(id, label, x, y, raw.radius);
+            }
+        }
+
+        return node;
+    }
+
+    /**
+     * Imports valid serialized edges.
+     *
+     * @param {Object[]} edges - Serialized edges.
+     * @returns {void}
      */
     #importEdges(edges) {
         if (Array.isArray(edges)) {
-            edges.forEach(function importEdge(raw) {
-                const edge = Edge.fromJSON(raw);
+            for (let i = 0; i < edges.length; i += 1) {
+                const edge = this.#createValidEdge(edges[i]);
 
-                if (this.#canImportEdge(edge)) {
-                    this.#storeEdge(edge);
+                if (edge && this.#canImportEdge(edge)) {
+                    this.#indexEdge(edge);
                 }
-            }, this);
+            }
         }
     }
 
     /**
-     * Check whether an imported edge is valid for the current graph.
+     * Creates an Edge instance from serialized data.
      *
-     * @param {Edge} edge - Imported edge.
+     * @param {Object} raw - Raw edge data.
+     * @returns {Edge|null} Valid edge, or null.
+     */
+    #createValidEdge(raw) {
+        let edge = null;
+
+        if (raw && typeof raw === "object") {
+            const from = String(raw.from);
+            const to = String(raw.to);
+
+            if (from && to) {
+                edge = new Edge(
+                    Graph.createEdgeId(from, to, this.directed),
+                    from,
+                    to,
+                    raw.weight
+                );
+            }
+        }
+
+        return edge;
+    }
+
+    /**
+     * Checks whether an imported edge can be indexed.
+     *
+     * @param {Edge} edge - Edge to validate.
      * @returns {boolean} True when the edge can be imported.
      */
     #canImportEdge(edge) {
         return (
-            !this.edgeMap.has(edge.id) &&
+            edge.from !== edge.to &&
             this.nodeMap.has(edge.from) &&
-            this.nodeMap.has(edge.to)
+            this.nodeMap.has(edge.to) &&
+            !this.edgeMap.has(edge.id) &&
+            !this.edgeExists(edge.from, edge.to)
         );
     }
 }
+
+
 // ---------------------------------------------------------------------
 //---------------------- TRAVERSAL -------------------------------------
 // ---------------------------------------------------------------------
@@ -1555,11 +1836,9 @@ class TraversalResult {
             if (edge) {
                 edge.renderState.path(true);
             }
-
             if (node) {
                 node.renderState.path(true);
             }
-
             if (prevNode) {
                 prevNode.renderState.path(true);
             }
@@ -1585,7 +1864,6 @@ class TraversalResult {
             if (edge) {
                 edge.renderState.path(true);
             }
-
             if (node) {
                 node.renderState.path(true);
             }
@@ -1624,7 +1902,7 @@ class TraversalResult {
         let output;
 
         if (plan.endId === null) {
-            output = `${name} visited: ${TraversalResult.#formatNodeOrder(plan.order, graph)}`;
+            output = `${name} explored: ${TraversalResult.#formatNodeOrder(plan.order, graph)}`;
         } else {
             output = TraversalResult.#formatTargetDistanceOutput(plan, graph, name);
         }
@@ -1648,9 +1926,9 @@ class TraversalResult {
         let output;
 
         if (Number.isFinite(distance)) {
-            output = `${name} visited:<hr>${TraversalResult.#formatNodeOrder(plan.order, graph)}<hr>Shortest distance to ${label}: ${distance}.`;
+            output = `${name} explored:<hr>${TraversalResult.#formatNodeOrder(plan.order, graph)}<hr>Shortest distance to ${label}: ${distance}.`;
         } else {
-            output = `${name} visited:<hr>${TraversalResult.#formatNodeOrder(plan.order, graph)}<hr>No path to ${label}.`;
+            output = `${name} explored:<hr>${TraversalResult.#formatNodeOrder(plan.order, graph)}<hr>No path to ${label}.`;
         }
 
         return output;
@@ -1704,7 +1982,9 @@ class TraversalResult {
 
 /**
  * Base class for graph traversal planners.
- * This class only stores behavior shared by all traversal algorithms.
+ *
+ * Owns common traversal setup, adjacency list building, and animation step recording.
+ * Supports asynchronous plan creation to keep the UI responsive for large graphs.
  */
 class Traversal {
 
@@ -1712,9 +1992,15 @@ class Traversal {
      * Create a traversal planner.
      *
      * @param {Graph} graph - Graph instance.
+     * @param {string} startId - Start node id.
+     * @param {string|null} endId - Optional target node id.
      */
-    constructor(graph) {
+    constructor(graph, startId, endId = null) {
         this.graph = graph;
+        this.startId = String(startId);
+        this.endId = endId === null ? null : String(endId);
+        this.adjacency = this.buildAdjacencyList();
+        this.state = this.createSearchState();
     }
 
     /**
@@ -1722,23 +2008,25 @@ class Traversal {
      *
      * @param {string} algorithm - Algorithm id.
      * @param {Graph} graph - Graph instance.
+     * @param {string} startId - Start node id.
+     * @param {string|null} endId - Optional target node id.
      * @returns {Traversal} Traversal instance.
      */
-    static create(algorithm, graph) {
+    static create(algorithm, graph, startId, endId = null) {
         let traversal;
 
         if (algorithm === "BFS") {
-            traversal = new BreadthFirst(graph);
+            traversal = new BreadthFirst(graph, startId, endId);
         } else if (algorithm === "DFS") {
-            traversal = new DepthFirst(graph);
+            traversal = new DepthFirst(graph, startId, endId);
         } else if (algorithm === "Dijkstra") {
-            traversal = new Dijkstra(graph);
+            traversal = new Dijkstra(graph, startId, endId);
         } else if (algorithm === "Prim") {
-            traversal = new Prim(graph);
+            traversal = new Prim(graph, startId, endId);
         } else if (algorithm === "Bellman-Ford") {
-            traversal = new BellmanFord(graph);
+            traversal = new BellmanFord(graph, startId, endId);
         } else {
-            throw new Error(`Unknown traversal algorithm: ${algorithm}`);
+            throw new Error("Unknown traversal algorithm: " + algorithm);
         }
 
         return traversal;
@@ -1751,6 +2039,37 @@ class Traversal {
      */
     validate() {
         return null;
+    }
+
+    /**
+     * Create the traversal plan synchronously.
+     *
+     * Child classes must override this method.
+     *
+     * @returns {object} Traversal plan.
+     */
+    createPlan() {
+        throw new Error("Traversal subclasses must implement createPlan().");
+    }
+
+    /**
+     * Create the traversal plan asynchronously with periodic yielding.
+     *
+     * Child classes should override this for expensive traversals.
+     * The default implementation wraps the synchronous createPlan().
+     *
+     * @param {object} options - Async options.
+     * @param {function} options.yieldFn - Function to call to yield to the browser.
+     * @param {number} options.yieldEvery - Yield after processing this many items.
+     * @returns {Promise<object>} Traversal plan.
+     */
+    async createPlanAsync(options) {
+        let plan;
+
+        await options.yieldFn();
+        plan = this.createPlan();
+
+        return plan;
     }
 
     /**
@@ -1771,24 +2090,29 @@ class Traversal {
      *
      * @param {string} name - Human-readable algorithm name.
      * @param {string} algorithm - Algorithm id.
-     * @param {string} startId - Start node id.
-     * @param {object} state - Traversal state.
-     * @param {string|null} endId - Optional target node id.
      * @param {Map<string, number>|null} distances - Optional distance table.
      * @param {object} metadata - Optional algorithm metadata.
      * @returns {object} Traversal plan.
      */
-    createPlanResult(name, algorithm, startId, state, endId = null, distances = null, metadata = {}) {
+    createPlanResult(name, algorithm, distances = null, metadata = {}) {
+        if (distances === undefined) {
+            distances = null;
+        }
+
+        if (metadata === undefined) {
+            metadata = {};
+        }
+
         return {
-            name,
-            algorithm,
-            startId,
-            endId,
-            steps: state.steps,
-            order: state.order,
-            parent: state.parent,
-            distances,
-            metadata,
+            name: name,
+            algorithm: algorithm,
+            startId: this.startId,
+            endId: this.endId,
+            steps: this.state.steps,
+            order: this.state.order,
+            parent: this.state.parent,
+            distances: distances,
+            metadata: metadata,
             index: 0
         };
     }
@@ -1796,18 +2120,19 @@ class Traversal {
     /**
      * Build a graph adjacency list.
      *
-     * @param {boolean} deterministic - Whether neighbor lists should be sorted.
      * @returns {Map<string, Array<object>>} Adjacency list.
      */
-    buildAdjacencyList(deterministic = false) {
-        const adjacency = new Map();
+    buildAdjacencyList() {
+        let adjacency = new Map();
+        let i;
+        let edge;
 
-        for (let i = 0; i < this.graph.nodeOrder.length; i += 1) {
+        for (i = 0; i < this.graph.nodeOrder.length; i += 1) {
             adjacency.set(this.graph.nodeOrder[i], []);
         }
 
-        for (let i = 0; i < this.graph.edgeOrder.length; i += 1) {
-            const edge = this.graph.edgeMap.get(this.graph.edgeOrder[i]);
+        for (i = 0; i < this.graph.edgeOrder.length; i += 1) {
+            edge = this.graph.edgeMap.get(this.graph.edgeOrder[i]);
 
             if (edge && adjacency.has(edge.from) && adjacency.has(edge.to)) {
                 this.addNeighbor(adjacency, edge.from, edge.to, edge.id, edge.weight);
@@ -1818,11 +2143,22 @@ class Traversal {
             }
         }
 
-        if (deterministic) {
-            this.sortAdjacencyList(adjacency);
-        }
+        this.#sortAdjacencyList(adjacency);
 
         return adjacency;
+    }
+
+    /**
+     * Sort every adjacency neighbor list by destination node label.
+     *
+     * @param {Map<string, Array<object>>} adjacency - Adjacency list.
+     */
+    #sortAdjacencyList(adjacency) {
+        let self = this;
+
+        adjacency.forEach(function sortNeighbors(neighbors) {
+            neighbors.sort(self.graph.compareNeighbors.bind(self.graph));
+        });
     }
 
     /**
@@ -1838,23 +2174,8 @@ class Traversal {
         adjacency.get(fromId).push({
             from: fromId,
             to: toId,
-            edgeId,
+            edgeId: edgeId,
             weight: this.getEdgeCost(weight)
-        });
-    }
-
-    /**
-     * Sort every adjacency neighbor list.
-     *
-     * @param {Map<string, Array<object>>} adjacency - Adjacency list.
-     */
-    sortAdjacencyList(adjacency) {
-        const graph = this.graph;
-
-        adjacency.forEach(function sortNeighbors(neighbors) {
-            neighbors.sort(function compareNeighbors(first, second) {
-                return graph.compareNeighbors(first, second);
-            });
         });
     }
 
@@ -1864,39 +2185,66 @@ class Traversal {
      * @param {Map<string, object>} parent - Parent map.
      * @param {string} nodeId - Reached node id.
      * @param {string} previousId - Previous node id.
-     * @param {string} edgeId - Edge used to reach node.
+     * @param {string|null} edgeId - Edge used to reach node.
      */
     setPredecessor(parent, nodeId, previousId, edgeId) {
         parent.set(nodeId, {
             prev: previousId,
-            edgeId
+            edgeId: edgeId
         });
     }
 
     /**
-     * Record a node visit step.
+     * Record that a node or edge has been discovered.
      *
-     * @param {object} state - Traversal state.
-     * @param {string} nodeId - Visited node id.
-     * @param {string|null} edgeId - Incoming edge id.
+     * @param {string} fromId - Source node id.
+     * @param {string} toId - Discovered node id.
+     * @param {string|null} edgeId - Edge used for discovery.
      * @param {Map<string, number>|null} distances - Optional distance snapshot.
      */
-    recordVisitStep(state, nodeId, edgeId = null, distances = null) {
-        state.order.push(nodeId);
-        state.steps.push(this.#createAnimationStep("visit", null, nodeId, edgeId, distances));
+    recordDiscoverStep(fromId, toId, edgeId = null, distances = null) {
+        if (distances === undefined) {
+            distances = null;
+        }
+
+        this.state.order.push(toId);
+        this.state.steps.push(
+            this.#createAnimationStep("discover", fromId, toId, edgeId, distances)
+        );
     }
 
     /**
-     * Record an edge discovery step.
+     * Record that a node is being explored.
      *
-     * @param {object} state - Traversal state.
-     * @param {string} fromId - Source node id.
-     * @param {string} toId - Target node id.
-     * @param {string} edgeId - Traversed edge id.
+     * @param {string} nodeId - Exploring node id.
+     * @param {string|null} edgeId - Incoming edge id.
      * @param {Map<string, number>|null} distances - Optional distance snapshot.
      */
-    recordDiscoveryStep(state, fromId, toId, edgeId, distances = null) {
-        state.steps.push(this.#createAnimationStep("active", fromId, toId, edgeId, distances));
+    recordExploreStep(nodeId, edgeId = null, distances = null) {
+        if (distances === undefined) {
+            distances = null;
+        }
+
+        this.state.steps.push(
+            this.#createAnimationStep("explore", null, nodeId, edgeId, distances)
+        );
+    }
+
+    /**
+     * Record that a node has finished exploration.
+     *
+     * @param {string} nodeId - Finished node id.
+     * @param {string|null} edgeId - Incoming edge id.
+     * @param {Map<string, number>|null} distances - Optional distance snapshot.
+     */
+    recordFinishStep(nodeId, edgeId = null, distances = null) {
+        if (distances === undefined) {
+            distances = null;
+        }
+
+        this.state.steps.push(
+            this.#createAnimationStep("finish", null, nodeId, edgeId, distances)
+        );
     }
 
     /**
@@ -1919,8 +2267,8 @@ class Traversal {
      * @param {Map<string, number>|null} distances - Optional distance snapshot.
      * @returns {object} Animation step.
      */
-    #createAnimationStep(type, fromId, nodeId, edgeId, distances = null) {
-        const step = {type, nodeId};
+    #createAnimationStep(type, fromId, nodeId, edgeId, distances) {
+        let step = {type: type, nodeId: nodeId};
 
         if (fromId !== null) {
             step.from = fromId;
@@ -1940,268 +2288,488 @@ class Traversal {
 
 /**
  * Builds Breadth-First Search traversal plans.
+ *
+ * BFS explores nodes in FIFO order, guaranteeing the shortest paths in
+ * unweighted graphs. Yields to the browser every N nodes for large graphs.
  */
 class BreadthFirst extends Traversal {
 
     /**
-     * Build a Breadth-First Search traversal plan.
-     * BFS explores nodes level by level using a FIFO queue.
+     * Create a Breadth-First Search traversal planner.
      *
+     * @param {Graph} graph - Graph instance.
      * @param {string} startId - Start node id.
      * @param {string|null} endId - Optional target node id.
-     * @returns {object} BFS traversal plan.
      */
-    createPlan(startId, endId = null) {
-        const adjacency = super.buildAdjacencyList();
-        const state = super.createSearchState();
-        const visited = new Set([startId]);
-        const queue = [{nodeId: startId, edgeId: null}];
-
-        for (let queueIndex = 0, targetFound = false; queueIndex < queue.length && !targetFound; queueIndex += 1) {
-            const current = queue[queueIndex];
-
-            super.recordVisitStep(state, current.nodeId, current.edgeId);
-            targetFound = endId !== null && current.nodeId === endId;
-
-            if (!targetFound) {
-                this.#enqueueUnvisitedNeighbors(current.nodeId, adjacency, visited, queue, state);
-            }
-        }
-
-        return super.createPlanResult("Breadth-First Search", "BFS", startId, state, endId);
+    constructor(graph, startId, endId = null) {
+        super(graph, startId, endId);
+        this.discovered = new Set();
+        this.queue = [];
+        this.targetFound = false;
     }
 
     /**
-     * Enqueue every unvisited neighbor.
+     * Build a Breadth-First Search traversal plan synchronously.
      *
-     * @param {string} currentId - Current node id.
-     * @param {Map<string, Array<object>>} adjacency - Adjacency list.
-     * @param {Set<string>} visited - Visited node ids.
-     * @param {object[]} queue - BFS queue.
-     * @param {object} state - Traversal state.
+     * @returns {object} BFS traversal plan.
      */
-    #enqueueUnvisitedNeighbors(currentId, adjacency, visited, queue, state) {
-        const neighbors = adjacency.get(currentId) || [];
+    createPlan() {
+        this.#discover(this.startId, this.startId, null);
+        this.#exploreQueue();
 
-        for (let i = 0; i < neighbors.length; i += 1) {
-            const edge = neighbors[i];
+        return super.createPlanResult("Breadth-First Search", "BFS");
+    }
 
-            if (!visited.has(edge.to)) {
-                visited.add(edge.to);
-                queue.push({nodeId: edge.to, edgeId: edge.edgeId});
-                super.setPredecessor(state.parent, edge.to, currentId, edge.edgeId);
-                super.recordDiscoveryStep(state, currentId, edge.to, edge.edgeId);
+    /**
+     * Build a Breadth-First Search traversal plan asynchronously.
+     *
+     * Yields to the browser after processing chunks of the queue.
+     *
+     * @param {object} options - Async options.
+     * @param {function} options.yieldFn - Function to call to yield to the browser.
+     * @param {number} options.yieldEvery - Yield after processing this many nodes.
+     * @returns {Promise<object>} BFS traversal plan.
+     */
+    async createPlanAsync(options) {
+        let yieldEvery = options.yieldEvery || 50;
+        let processed = 0;
+
+        this.#discover(this.startId, this.startId, null);
+
+        while (this.queue.length > 0 && !this.targetFound) {
+            this.#exploreNextInQueue();
+
+            processed += 1;
+
+            if (processed % yieldEvery === 0) {
+                await options.yieldFn();
             }
+        }
+
+        return super.createPlanResult("Breadth-First Search", "BFS");
+    }
+
+    /**
+     * Discover a node and enqueue it for later exploration.
+     *
+     * @param {string} nodeId - Discovered node id.
+     * @param {string} fromId - Source node id.
+     * @param {string|null} edgeId - Edge used to reach the node.
+     */
+    #discover(nodeId, fromId, edgeId) {
+        this.discovered.add(nodeId);
+        super.recordDiscoverStep(fromId, nodeId, edgeId);
+        this.queue.push({
+            nodeId: nodeId,
+            incomingEdgeId: edgeId
+        });
+    }
+
+    /**
+     * Explore the next node in the queue.
+     *
+     * Discovers all undiscovered neighbors and enqueues them.
+     */
+    #exploreNextInQueue() {
+        let item = this.queue.shift();
+        let neighbors = this.adjacency.get(item.nodeId) || [];
+        let i;
+        let edge;
+
+        super.recordExploreStep(item.nodeId, item.incomingEdgeId);
+
+        if (this.endId !== null && item.nodeId === this.endId) {
+            this.targetFound = true;
+        }
+
+        for (i = 0; i < neighbors.length && !this.targetFound; i += 1) {
+            edge = neighbors[i];
+
+            if (!this.discovered.has(edge.to)) {
+                super.setPredecessor(this.state.parent, edge.to, item.nodeId, edge.edgeId);
+                this.#discover(edge.to, item.nodeId, edge.edgeId);
+            }
+        }
+
+        super.recordFinishStep(item.nodeId, item.incomingEdgeId);
+    }
+
+    /**
+     * Explore queued nodes in FIFO order.
+     *
+     * Used by the synchronous createPlan().
+     */
+    #exploreQueue() {
+        while (this.queue.length > 0 && !this.targetFound) {
+            this.#exploreNextInQueue();
         }
     }
 }
 
 /**
  * Builds Depth-First Search traversal plans.
+ *
+ * DFS explores as far as possible along each branch before backtracking.
+ * Uses an explicit stack to avoid recursion depth limits and yields
+ * periodically to keep the UI responsive.
+ *
+ * Stack frames alternate between:
+ * - "enter": Discover and begin exploring a node.
+ * - "resume": Finish a node after all neighbors are explored.
  */
 class DepthFirst extends Traversal {
 
     /**
-     * Build a Depth-First Search traversal plan.
-     * DFS explores as far as possible along one branch before backtracking.
+     * Create a Depth-First Search traversal planner.
      *
+     * @param {Graph} graph - Graph instance.
      * @param {string} startId - Start node id.
      * @param {string|null} endId - Optional target node id.
+     */
+    constructor(graph, startId, endId = null) {
+        super(graph, startId, endId);
+        this.discovered = new Set();
+        this.targetFound = false;
+    }
+
+    /**
+     * Build a Depth-First Search traversal plan synchronously.
+     *
      * @returns {object} DFS traversal plan.
      */
-    createPlan(startId, endId = null) {
-        const adjacency = super.buildAdjacencyList();
-        const state = super.createSearchState();
-        const visited = new Set();
+    createPlan() {
+        this.discovered.add(this.startId);
+        super.recordDiscoverStep(this.startId, this.startId, null);
 
-        this.#walk(startId, adjacency, visited, state, endId);
+        const stack = [];
 
-        return super.createPlanResult("Depth-First Search", "DFS", startId, state, endId);
-    }
+        stack.push({
+            nodeId: this.startId,
+            fromId: this.startId,
+            edgeId: null,
+            neighborIndex: 0
+        });
 
-    /**
-     * Visit one DFS node and recursively explore its neighbors.
-     *
-     * @param {string} nodeId - Current node id.
-     * @param {Map<string, Array<object>>} adjacency - Adjacency list.
-     * @param {Set<string>} visited - Visited node ids.
-     * @param {object} state - Traversal state.
-     * @param {string|null} endId - Optional target node id.
-     * @param {string|null} incomingEdgeId - Edge used to reach current node.
-     * @returns {boolean} True when target has been found.
-     */
-    #walk(nodeId, adjacency, visited, state, endId = null, incomingEdgeId = null) {
-        let targetFound;
+        while (stack.length > 0 && !this.targetFound) {
+            const frame = stack[stack.length - 1];
 
-        visited.add(nodeId);
-        super.recordVisitStep(state, nodeId, incomingEdgeId);
+            if (frame.neighborIndex === 0) {
+                super.recordExploreStep(frame.nodeId, frame.edgeId);
 
-        if (endId !== null && nodeId === endId) {
-            targetFound = true;
-        } else {
-            targetFound = this.#tryBranches(nodeId, adjacency, visited, state, endId);
-        }
+                if (this.endId !== null && frame.nodeId === this.endId) {
+                    this.targetFound = true;
+                    break;
+                }
+            }
 
-        return targetFound;
-    }
+            const neighbors = this.adjacency.get(frame.nodeId) || [];
+            let allNeighborsExplored = true;
 
-    /**
-     * Try each unvisited DFS branch.
-     *
-     * @param {string} nodeId - Current node id.
-     * @param {Map<string, Array<object>>} adjacency - Adjacency list.
-     * @param {Set<string>} visited - Visited node ids.
-     * @param {object} state - Traversal state.
-     * @param {string|null} endId - Optional target node id.
-     * @returns {boolean} True when target has been found.
-     */
-    #tryBranches(nodeId, adjacency, visited, state, endId = null) {
-        const neighbors = adjacency.get(nodeId) || [];
-        let targetFound = false;
+            for (let i = frame.neighborIndex; i < neighbors.length; i += 1) {
+                const neighbor = neighbors[i];
 
-        for (let i = 0; i < neighbors.length && !targetFound; i += 1) {
-            const edge = neighbors[i];
+                if (!this.discovered.has(neighbor.to)) {
+                    this.discovered.add(neighbor.to);
+                    super.setPredecessor(this.state.parent, neighbor.to, frame.nodeId, neighbor.edgeId);
+                    super.recordDiscoverStep(frame.nodeId, neighbor.to, neighbor.edgeId);
 
-            if (!visited.has(edge.to)) {
-                super.setPredecessor(state.parent, edge.to, nodeId, edge.edgeId);
-                super.recordDiscoveryStep(state, nodeId, edge.to, edge.edgeId);
-                targetFound = this.#walk(edge.to, adjacency, visited, state, endId, edge.edgeId);
+                    frame.neighborIndex = i + 1;
+
+                    stack.push({
+                        nodeId: neighbor.to,
+                        fromId: frame.nodeId,
+                        edgeId: neighbor.edgeId,
+                        neighborIndex: 0
+                    });
+
+                    allNeighborsExplored = false;
+                    break;
+                }
+            }
+
+            if (allNeighborsExplored) {
+                super.recordFinishStep(frame.nodeId, frame.edgeId);
+                stack.pop();
             }
         }
 
-        return targetFound;
+        return super.createPlanResult("Depth-First Search", "DFS");
+    }
+
+    /**
+     * Build a Depth-First Search traversal plan asynchronously.
+     *
+     * Yields to the browser after processing chunks of frames.
+     *
+     * @param {object} options - Async options.
+     * @param {function} options.yieldFn - Function to call to yield to the browser.
+     * @param {number} options.yieldEvery - Yield after processing this many frames.
+     * @returns {Promise<object>} DFS traversal plan.
+     */
+    async createPlanAsync(options) {
+        this.discovered.add(this.startId);
+        super.recordDiscoverStep(this.startId, this.startId, null);
+
+        const stack = [];
+        stack.push({
+            nodeId: this.startId,
+            fromId: this.startId,
+            edgeId: null,
+            neighborIndex: 0
+        });
+
+        const yieldEvery = options.yieldEvery || 50;
+        let processed = 0;
+
+        while (stack.length > 0 && !this.targetFound) {
+            const frame = stack[stack.length - 1];
+
+            if (frame.neighborIndex === 0) {
+                super.recordExploreStep(frame.nodeId, frame.edgeId);
+
+                if (this.endId !== null && frame.nodeId === this.endId) {
+                    this.targetFound = true;
+                    break;
+                }
+            }
+
+            const neighbors = this.adjacency.get(frame.nodeId) || [];
+            let allNeighborsExplored = true;
+
+            for (let i = frame.neighborIndex; i < neighbors.length; i += 1) {
+                const neighbor = neighbors[i];
+
+                if (!this.discovered.has(neighbor.to)) {
+                    this.discovered.add(neighbor.to);
+                    super.setPredecessor(this.state.parent, neighbor.to, frame.nodeId, neighbor.edgeId);
+                    super.recordDiscoverStep(frame.nodeId, neighbor.to, neighbor.edgeId);
+
+                    frame.neighborIndex = i + 1;
+
+                    stack.push({
+                        nodeId: neighbor.to,
+                        fromId: frame.nodeId,
+                        edgeId: neighbor.edgeId,
+                        neighborIndex: 0
+                    });
+
+                    allNeighborsExplored = false;
+                    break;
+                }
+            }
+
+            if (allNeighborsExplored) {
+                super.recordFinishStep(frame.nodeId, frame.edgeId);
+                stack.pop();
+            }
+
+            processed += 1;
+
+            if (processed % yieldEvery === 0) {
+                await options.yieldFn();
+            }
+        }
+
+        return super.createPlanResult("Depth-First Search", "DFS");
     }
 }
 
 /**
  * Base class for shortest-path traversal planners.
+ *
+ * Provides distance table initialization and edge relaxation helpers.
  */
 class ShortestPathTraversal extends Traversal {
 
     /**
      * Create an initialized distance table.
      *
-     * @param {string} startId - Start node id.
+     * All nodes start at Infinity except the start node at 0.
+     *
      * @returns {Map<string, number>} Distance table.
      */
-    initializeDistances(startId) {
-        const distances = new Map();
+    initializeDistances() {
+        let distances = new Map();
+        let i;
 
-        for (let i = 0; i < this.graph.nodeOrder.length; i += 1) {
+        for (i = 0; i < this.graph.nodeOrder.length; i += 1) {
             distances.set(this.graph.nodeOrder[i], Infinity);
         }
 
-        distances.set(startId, 0);
+        distances.set(this.startId, 0);
 
         return distances;
-    }
-
-    /**
-     * Attempt to relax one edge.
-     *
-     * @param {object} edge - Edge descriptor.
-     * @param {Map<string, number>} distances - Distance table.
-     * @param {object} state - Traversal state.
-     * @param {boolean} visitAfterRelaxation - Whether to record a visit after improvement.
-     * @returns {boolean} True when the distance improved.
-     */
-    relax(edge, distances, state, visitAfterRelaxation = false) {
-        let improved = false;
-        const fromDistance = distances.get(edge.from);
-
-        if (Number.isFinite(fromDistance)) {
-            const candidateDistance = fromDistance + edge.weight;
-
-            if (candidateDistance < distances.get(edge.to)) {
-                improved = true;
-
-                distances.set(edge.to, candidateDistance);
-                super.setPredecessor(state.parent, edge.to, edge.from, edge.edgeId);
-                super.recordDiscoveryStep(state, edge.from, edge.to, edge.edgeId, distances);
-
-                if (visitAfterRelaxation) {
-                    super.recordVisitStep(state, edge.to, edge.edgeId, distances);
-                }
-            }
-        }
-
-        return improved;
     }
 }
 
 /**
  * Builds Dijkstra shortest-path traversal plans.
+ *
+ * Dijkstra greedily selects the nearest unexplored node and relaxes its
+ * outgoing edges. Yields to the browser after processing chunks of nodes.
  */
 class Dijkstra extends ShortestPathTraversal {
 
     /**
-     * Validate whether Dijkstra can run.
+     * Create a Dijkstra traversal planner.
+     *
+     * @param {Graph} graph - Graph instance.
+     * @param {string} startId - Start node id.
+     * @param {string|null} endId - Optional target node id.
+     */
+    constructor(graph, startId, endId = null) {
+        super(graph, startId, endId);
+    }
+
+    /**
+     * Validate whether Dijkstra can run on the current graph.
      *
      * @returns {string|null} Error message, or null when valid.
      */
     validate() {
-        return (this.graph.hasNegativeWeight())
-            ? "Dijkstra does not support negative weights. Use Bellman-Ford." : super.validate();
+        if (this.graph.hasNegativeWeight()) {
+            return "Dijkstra does not support negative weights. Use Bellman-Ford.";
+        }
+
+        return super.validate();
     }
 
     /**
-     * Build a Dijkstra shortest-path traversal plan.
+     * Build a Dijkstra shortest-path traversal plan synchronously.
      *
-     * @param {string} startId - Start node id.
-     * @param {string|null} endId - Optional target node id.
      * @returns {object} Dijkstra traversal plan.
      */
-    createPlan(startId, endId = null) {
-        const adjacency = super.buildAdjacencyList();
-        const state = super.createSearchState();
-        const distances = super.initializeDistances(startId);
-        const settled = new Set();
+    createPlan() {
+        let distances = super.initializeDistances();
+        let explored = new Set();
+        let currentId;
 
-        for (let targetSettled = false, reachableNodesRemain = true; settled.size < this.graph.nodeMap.size && !targetSettled && reachableNodesRemain;) {
-            const currentId = this.#chooseNearestUnsettledNode(distances, settled);
+        super.recordDiscoverStep(this.startId, this.startId, null, distances);
 
-            reachableNodesRemain = currentId !== null;
+        while (explored.size < this.graph.nodeMap.size) {
+            currentId = this.#chooseNearestUnexploredNode(distances, explored);
 
-            if (reachableNodesRemain) {
-                settled.add(currentId);
-                this.#recordSettledNode(state, currentId, distances);
-                targetSettled = endId !== null && currentId === endId;
+            if (currentId === null) {
+                break;
+            }
 
-                if (!targetSettled) {
-                    this.#relaxOutgoingEdges(currentId, adjacency, distances, settled, state);
+            this.#exploreNode(currentId, distances, explored);
+
+            if (this.endId !== null && currentId === this.endId) {
+                break;
+            }
+        }
+
+        return super.createPlanResult("Dijkstra", "Dijkstra", distances);
+    }
+
+    /**
+     * Build a Dijkstra traversal plan asynchronously.
+     *
+     * Yields to the browser after exploring chunks of nodes.
+     *
+     * @param {object} options - Async options.
+     * @param {function} options.yieldFn - Function to call to yield to the browser.
+     * @param {number} options.yieldEvery - Yield after exploring this many nodes.
+     * @returns {Promise<object>} Dijkstra traversal plan.
+     */
+    async createPlanAsync(options) {
+        let distances = super.initializeDistances();
+        let explored = new Set();
+        let yieldEvery = options.yieldEvery || 20;
+        let processed = 0;
+        let currentId;
+
+        super.recordDiscoverStep(this.startId, this.startId, null, distances);
+
+        while (explored.size < this.graph.nodeMap.size) {
+            currentId = this.#chooseNearestUnexploredNode(distances, explored);
+
+            if (currentId === null) {
+                break;
+            }
+
+            this.#exploreNode(currentId, distances, explored);
+
+            processed += 1;
+
+            if (processed % yieldEvery === 0) {
+                await options.yieldFn();
+            }
+
+            if (this.endId !== null && currentId === this.endId) {
+                break;
+            }
+        }
+
+        return super.createPlanResult("Dijkstra", "Dijkstra", distances);
+    }
+
+    /**
+     * Explore a node by relaxing all its outgoing edges.
+     *
+     * @param {string} nodeId - Node to explore.
+     * @param {Map<string, number>} distances - Distance table.
+     * @param {Set<string>} explored - Explored node ids.
+     */
+    #exploreNode(nodeId, distances, explored) {
+        let incomingEdgeId = this.#getIncomingEdgeId(nodeId);
+        let neighbors = this.adjacency.get(nodeId) || [];
+        let i;
+        let edge;
+        let fromDistance;
+        let candidateDistance;
+
+        super.recordExploreStep(nodeId, incomingEdgeId, distances);
+        explored.add(nodeId);
+
+        for (i = 0; i < neighbors.length; i += 1) {
+            edge = neighbors[i];
+
+            if (explored.has(edge.to)) {
+                continue;
+            }
+
+            fromDistance = distances.get(edge.from);
+
+            if (Number.isFinite(fromDistance)) {
+                candidateDistance = fromDistance + edge.weight;
+
+                if (candidateDistance < distances.get(edge.to)) {
+                    distances.set(edge.to, candidateDistance);
+                    super.setPredecessor(this.state.parent, edge.to, edge.from, edge.edgeId);
+                    super.recordDiscoverStep(edge.from, edge.to, edge.edgeId, distances);
                 }
             }
         }
 
-        return super.createPlanResult("Dijkstra", "Dijkstra", startId, state, endId, distances);
+        super.recordFinishStep(nodeId, incomingEdgeId, distances);
     }
 
     /**
-     * Record a settled node visit.
+     * Get the edge id used to reach a node.
      *
-     * @param {object} state - Traversal state.
-     * @param {string} nodeId - Settled node id.
-     * @param {Map<string, number>} distances - Distance table.
+     * @param {string} nodeId - Node id.
+     * @returns {string|null} Incoming edge id, or null for the start node.
      */
-    #recordSettledNode(state, nodeId, distances) {
-        const predecessor = state.parent.get(nodeId);
-        const edgeId = predecessor ? predecessor.edgeId : null;
-        super.recordVisitStep(state, nodeId, edgeId, distances);
+    #getIncomingEdgeId(nodeId) {
+        let predecessor = this.state.parent.get(nodeId);
+        return predecessor ? predecessor.edgeId : null;
     }
 
     /**
-     * Choose the unsettled node with the smallest finite distance.
+     * Choose the unexplored node with the smallest finite distance.
      *
      * @param {Map<string, number>} distances - Distance table.
-     * @param {Set<string>} settled - Settled node ids.
-     * @returns {string|null} Node id, or null.
+     * @param {Set<string>} explored - Explored node ids.
+     * @returns {string|null} Node id, or null when no reachable unexplored nodes remain.
      */
-    #chooseNearestUnsettledNode(distances, settled) {
+    #chooseNearestUnexploredNode(distances, explored) {
         let bestId = null;
         let bestDistance = Infinity;
 
         distances.forEach(function inspectDistance(distance, nodeId) {
-            if (!settled.has(nodeId) && distance < bestDistance) {
+            if (!explored.has(nodeId) && distance < bestDistance) {
                 bestId = nodeId;
                 bestDistance = distance;
             }
@@ -2209,91 +2777,125 @@ class Dijkstra extends ShortestPathTraversal {
 
         return bestId;
     }
-
-    /**
-     * Relax every outgoing edge from a settled node.
-     *
-     * @param {string} currentId - Current node id.
-     * @param {Map<string, Array<object>>} adjacency - Adjacency list.
-     * @param {Map<string, number>} distances - Distance table.
-     * @param {Set<string>} settled - Settled node ids.
-     * @param {object} state - Traversal state.
-     */
-    #relaxOutgoingEdges(currentId, adjacency, distances, settled, state) {
-        const neighbors = adjacency.get(currentId) || [];
-
-        for (let i = 0; i < neighbors.length; i += 1) {
-            const edge = neighbors[i];
-
-            if (!settled.has(edge.to)) {
-                super.relax(edge, distances, state);
-            }
-        }
-    }
 }
 
 /**
  * Builds Bellman-Ford shortest-path traversal plans.
+ *
+ * Bellman-Ford handles negative edge weights and detects negative cycles.
+ * Yields to the browser between relaxation passes for large graphs.
  */
 class BellmanFord extends ShortestPathTraversal {
 
     /**
-     * Validate whether Bellman-Ford can run.
+     * Create a Bellman-Ford traversal planner.
+     *
+     * @param {Graph} graph - Graph instance.
+     * @param {string} startId - Start node id.
+     * @param {string|null} endId - Optional target node id.
+     */
+    constructor(graph, startId, endId = null) {
+        super(graph, startId, endId);
+    }
+
+    /**
+     * Validate whether Bellman-Ford can run on the current graph.
      *
      * @returns {string|null} Error message, or null when valid.
      */
     validate() {
-        return (!this.graph.directed && this.graph.hasNegativeWeight())
-            ? "Bellman-Ford negative weights require a directed graph.": super.validate();
+        if (!this.graph.directed && this.graph.hasNegativeWeight()) {
+            return "Bellman-Ford negative weights require a directed graph.";
+        }
+
+        return super.validate();
     }
 
     /**
-     * Build a Bellman-Ford shortest-path traversal plan.
+     * Build a Bellman-Ford shortest-path traversal plan synchronously.
      *
-     * @param {string} startId - Start node id.
-     * @param {string|null} endId - Optional target node id.
      * @returns {object} Bellman-Ford traversal plan.
      */
-    createPlan(startId, endId = null) {
-        const state = super.createSearchState();
-        const distances = super.initializeDistances(startId);
-        const edges = this.#buildRelaxationEdges();
+    createPlan() {
+        let distances = super.initializeDistances();
+        let edges = this.#buildRelaxationEdges();
+        let nodeCount = this.graph.nodeMap.size;
 
-        super.recordVisitStep(state, startId, null, distances);
-        this.#repeatRelaxationPasses(edges, distances, state);
+        super.recordDiscoverStep(this.startId, this.startId, null, distances);
+        this.#relaxUntilStable(edges, distances, nodeCount);
 
-        return super.createPlanResult("Bellman-Ford", "Bellman-Ford", startId, state, endId, distances, {
-            negativeCycle: this.#hasReachableNegativeCycle(edges, distances)
+        return super.createPlanResult("Bellman-Ford", "Bellman-Ford", distances, {
+            negativeCycle: this.#detectNegativeCycle(edges, distances)
         });
     }
 
     /**
-     * Builds directed relaxation edges.
+     * Build a Bellman-Ford traversal plan asynchronously.
      *
-     * @returns {object[]} Relaxation edge descriptors.
+     * Yields to the browser after each relaxation-pass.
+     *
+     * @param {object} options - Async options.
+     * @param {function} options.yieldFn - Function to call to yield to the browser.
+     * @param {number} options.yieldEvery - Unused, yields every pass regardless.
+     * @returns {Promise<object>} Bellman-Ford traversal plan.
+     */
+    async createPlanAsync(options) {
+        let distances = super.initializeDistances();
+        let edges = this.#buildRelaxationEdges();
+        let nodeCount = this.graph.nodeMap.size;
+        let changed = true;
+        let pass;
+
+        super.recordDiscoverStep(this.startId, this.startId, null, distances);
+
+        for (pass = 1; pass < nodeCount && changed; pass += 1) {
+            changed = this.#relaxAllEdgesOnce(edges, distances);
+
+            await options.yieldFn();
+
+            if (this.endId !== null &&
+                Number.isFinite(distances.get(this.endId)) &&
+                !changed) {
+                break;
+            }
+        }
+
+        return super.createPlanResult("Bellman-Ford", "Bellman-Ford", distances, {
+            negativeCycle: this.#detectNegativeCycle(edges, distances)
+        });
+    }
+
+    /**
+     * Builds directed relaxation edge descriptors from every graph edge.
+     *
+     * @returns {Array<object>} Relaxation edge descriptors.
      */
     #buildRelaxationEdges() {
-        const edges = [];
+        let edges = [];
+        let i;
+        let edge;
 
-        for (let i = 0; i < this.graph.edgeOrder.length; i += 1) {
-            const edge = this.graph.edgeMap.get(this.graph.edgeOrder[i]);
+        for (i = 0; i < this.graph.edgeOrder.length; i += 1) {
+            edge = this.graph.edgeMap.get(this.graph.edgeOrder[i]);
 
-            if (edge) {
+            if (!edge) {
+                continue;
+            }
+
+            edges.push({
+                from: edge.from,
+                to: edge.to,
+                edgeId: edge.id,
+                weight: super.getEdgeCost(edge.weight)
+            });
+
+            if (!this.graph.directed) {
                 edges.push({
-                    from: edge.from,
-                    to: edge.to,
+                    from: edge.to,
+                    to: edge.from,
                     edgeId: edge.id,
                     weight: super.getEdgeCost(edge.weight)
                 });
-
-                if (!this.graph.directed) {
-                    edges.push({
-                        from: edge.to,
-                        to: edge.from,
-                        edgeId: edge.id,
-                        weight: super.getEdgeCost(edge.weight)
-                    });
-                }
             }
         }
 
@@ -2301,176 +2903,251 @@ class BellmanFord extends ShortestPathTraversal {
     }
 
     /**
-     * Repeat relaxation passes until no distance improves or the maximum pass count is reached.
+     * Relax all edges in passes until no distance improves or the pass limit is reached.
      *
-     * @param {object[]} edges - Relaxation edges.
+     * @param {Array<object>} edges - Relaxation-edge descriptors.
      * @param {Map<string, number>} distances - Distance table.
-     * @param {object} state - Traversal state.
+     * @param {number} nodeCount - Total number of graph nodes.
      */
-    #repeatRelaxationPasses(edges, distances, state) {
+    #relaxUntilStable(edges, distances, nodeCount) {
         let changed = true;
+        let pass;
 
-        for (let pass = 1; pass < this.graph.nodeMap.size && changed; pass += 1) {
-            changed = this.#relaxEveryEdge(edges, distances, state);
+        for (pass = 1; pass < nodeCount && changed; pass += 1) {
+            changed = this.#relaxAllEdgesOnce(edges, distances);
+
+            if (this.endId !== null &&
+                Number.isFinite(distances.get(this.endId)) &&
+                !changed) {
+                break;
+            }
         }
     }
 
     /**
-     * Relax every edge once.
+     * Relax every edge exactly once.
      *
-     * @param {object[]} edges - Relaxation edges.
+     * Only processes edges whose source node has a finite distance.
+     *
+     * @param {Array<object>} edges - Relaxation-edge descriptors.
      * @param {Map<string, number>} distances - Distance table.
-     * @param {object} state - Traversal state.
      * @returns {boolean} True when at least one distance improved.
      */
-    #relaxEveryEdge(edges, distances, state) {
+    #relaxAllEdgesOnce(edges, distances) {
         let changed = false;
+        let i;
+        let edge;
+        let fromDistance;
+        let candidateDistance;
 
-        for (let i = 0; i < edges.length; i += 1) {
-            if (super.relax(edges[i], distances, state, true)) {
+        for (i = 0; i < edges.length; i += 1) {
+            edge = edges[i];
+            fromDistance = distances.get(edge.from);
+
+            if (!Number.isFinite(fromDistance)) {
+                continue;
+            }
+
+            super.recordExploreStep(edge.from, edge.edgeId, distances);
+
+            candidateDistance = fromDistance + edge.weight;
+
+            if (candidateDistance < distances.get(edge.to)) {
+                distances.set(edge.to, candidateDistance);
+                super.setPredecessor(this.state.parent, edge.to, edge.from, edge.edgeId);
+                super.recordDiscoverStep(edge.from, edge.to, edge.edgeId, distances);
                 changed = true;
             }
+
+            super.recordFinishStep(edge.from, edge.edgeId, distances);
         }
 
         return changed;
     }
 
     /**
-     * Check whether a reachable negative cycle exists.
+     * Detect whether a reachable negative cycle exists in the graph.
      *
-     * @param {object[]} edges - Relaxation edges.
+     * @param {Array<object>} edges - Relaxation-edge descriptors.
      * @param {Map<string, number>} distances - Distance table.
      * @returns {boolean} True when a reachable negative cycle exists.
      */
-    #hasReachableNegativeCycle(edges, distances) {
-        let found = false;
+    #detectNegativeCycle(edges, distances) {
+        let i;
+        let edge;
+        let fromDistance;
+        let candidateDistance;
 
-        for (let i = 0; i < edges.length && !found; i += 1) {
-            const edge = edges[i];
-            const fromDistance = distances.get(edge.from);
+        for (i = 0; i < edges.length; i += 1) {
+            edge = edges[i];
+            fromDistance = distances.get(edge.from);
 
-            if (Number.isFinite(fromDistance) && fromDistance + edge.weight < distances.get(edge.to)) {
-                found = true;
+            if (Number.isFinite(fromDistance)) {
+                candidateDistance = fromDistance + edge.weight;
+
+                if (candidateDistance < distances.get(edge.to)) {
+                    return true;
+                }
             }
         }
 
-        return found;
+        return false;
     }
 }
 
 /**
  * Builds Prim minimum-spanning-tree traversal plans.
+ *
+ * Prim grows a minimum spanning tree by repeatedly adding the cheapest
+ * edge connecting the current tree to a node outside the tree.
+ * Yields to the browser after adding chunks of nodes to the tree.
  */
 class Prim extends Traversal {
 
     /**
-     * Validate whether Prim can run.
+     * Create a Prim MST traversal planner.
+     *
+     * @param {Graph} graph - Graph instance.
+     * @param {string} startId - Start node id.
+     * @param {string|null} endId - Unused for Prim, accepted for API consistency.
+     */
+    constructor(graph, startId, endId = null) {
+        super(graph, startId, endId);
+    }
+
+    /**
+     * Validate whether Prim can run on the current graph.
      *
      * @returns {string|null} Error message, or null when valid.
      */
     validate() {
-        return (this.graph.directed) ? "Prim's MST requires an undirected graph.": super.validate();
+        if (this.graph.directed) {
+            return "Prim's MST requires an undirected graph.";
+        }
+
+        return super.validate();
     }
 
     /**
-     * Build a Prim minimum-spanning-tree traversal plan.
+     * Build a Prim minimum-spanning-tree traversal plan synchronously.
      *
-     * @param {string} startId - Start node id.
      * @returns {object} Prim traversal plan.
      */
-    createPlan(startId) {
-        const adjacency = super.buildAdjacencyList();
-        const state = super.createSearchState();
-        const treeNodes = new Set([startId]);
-
+    createPlan() {
+        let treeNodes = new Set();
         let totalWeight = 0;
-        let disconnected = false;
+        let edge;
 
-        super.recordVisitStep(state, startId);
+        this.#acceptTreeNode(this.startId, this.startId, null);
+        treeNodes.add(this.startId);
 
-        while (treeNodes.size < this.graph.nodeMap.size && !disconnected) {
-            const cheapestEdge = this.#chooseCheapestCrossingEdge(adjacency, treeNodes);
+        while (treeNodes.size < this.graph.nodeMap.size) {
+            edge = this.#chooseCheapestCrossingEdge(treeNodes);
 
-            if (cheapestEdge === null) {
-                disconnected = true;
-            } else {
-                treeNodes.add(cheapestEdge.to);
-                totalWeight += cheapestEdge.weight;
-                super.setPredecessor(state.parent, cheapestEdge.to, cheapestEdge.from, cheapestEdge.edgeId);
-                super.recordDiscoveryStep(state, cheapestEdge.from, cheapestEdge.to, cheapestEdge.edgeId);
-                super.recordVisitStep(state, cheapestEdge.to, cheapestEdge.edgeId);
+            if (edge === null) {
+                break;
             }
+
+            totalWeight += edge.weight;
+            treeNodes.add(edge.to);
+            super.setPredecessor(this.state.parent, edge.to, edge.from, edge.edgeId);
+            this.#acceptTreeNode(edge.to, edge.from, edge.edgeId);
         }
 
-        return super.createPlanResult("Prim's Minimum Spanning Tree", "Prim", startId, state, null, null, {
-            totalWeight,
+        return super.createPlanResult("Prim's Minimum Spanning Tree", "Prim", null, {
+            totalWeight: totalWeight,
             connected: treeNodes.size === this.graph.nodeMap.size
         });
     }
 
     /**
+     * Build a Prim traversal plan asynchronously.
+     *
+     * Yields to the browser after adding chunks of nodes to the tree.
+     *
+     * @param {object} options - Async options.
+     * @param {function} options.yieldFn - Function to call to yield to the browser.
+     * @param {number} options.yieldEvery - Yield after adding this many tree nodes.
+     * @returns {Promise<object>} Prim traversal plan.
+     */
+    async createPlanAsync(options) {
+        let treeNodes = new Set();
+        let totalWeight = 0;
+        let yieldEvery = options.yieldEvery || 20;
+        let processed = 0;
+        let edge;
+
+        this.#acceptTreeNode(this.startId, this.startId, null);
+        treeNodes.add(this.startId);
+
+        while (treeNodes.size < this.graph.nodeMap.size) {
+            edge = this.#chooseCheapestCrossingEdge(treeNodes);
+
+            if (edge === null) {
+                break;
+            }
+
+            totalWeight += edge.weight;
+            treeNodes.add(edge.to);
+            super.setPredecessor(this.state.parent, edge.to, edge.from, edge.edgeId);
+            this.#acceptTreeNode(edge.to, edge.from, edge.edgeId);
+
+            processed += 1;
+
+            if (processed % yieldEvery === 0) {
+                await options.yieldFn();
+            }
+        }
+
+        return super.createPlanResult("Prim's Minimum Spanning Tree", "Prim", null, {
+            totalWeight: totalWeight,
+            connected: treeNodes.size === this.graph.nodeMap.size
+        });
+    }
+
+    /**
+     * Record animation steps for a node accepted into the MST.
+     *
+     * @param {string} nodeId - Accepted node id.
+     * @param {string} fromId - Source node id.
+     * @param {string|null} edgeId - Edge used to accept the node.
+     */
+    #acceptTreeNode(nodeId, fromId, edgeId) {
+        super.recordDiscoverStep(fromId, nodeId, edgeId);
+        super.recordExploreStep(nodeId, edgeId);
+        super.recordFinishStep(nodeId, edgeId);
+    }
+
+    /**
      * Choose the cheapest edge crossing from the current tree to an outside node.
      *
-     * @param {Map<string, Array<object>>} adjacency - Adjacency list.
      * @param {Set<string>} treeNodes - Node ids already in the tree.
-     * @returns {object|null} Cheapest crossing edge, or null when none exists.
+     * @returns {object|null} Cheapest crossing-edge descriptor, or null when none exists.
      */
-    #chooseCheapestCrossingEdge(adjacency, treeNodes) {
+    #chooseCheapestCrossingEdge(treeNodes) {
         let cheapestEdge = null;
+        let self = this;
 
         treeNodes.forEach(function inspectTreeNode(fromId) {
-            const neighbors = adjacency.get(fromId) || [];
+            let neighbors = self.adjacency.get(fromId) || [];
+            let i;
+            let edge;
 
-            for (let i = 0; i < neighbors.length; i += 1) {
-                const edge = neighbors[i];
+            for (i = 0; i < neighbors.length; i += 1) {
+                edge = neighbors[i];
 
-                if (!treeNodes.has(edge.to) && this.#isBetterCrossingEdge(edge, cheapestEdge)) {
-                    cheapestEdge = edge;
+                if (!treeNodes.has(edge.to)) {
+                    if (cheapestEdge === null || edge.weight < cheapestEdge.weight) {
+                        cheapestEdge = edge;
+                    }
                 }
             }
-        }, this);
+        });
 
         return cheapestEdge;
     }
-
-    /**
-     * Check whether a candidate crossing edge is better than the current best edge.
-     *
-     * @param {object} candidate - Candidate edge.
-     * @param {object|null} currentBest - Current best edge.
-     * @returns {boolean} True when a candidate should replace current best.
-     */
-    #isBetterCrossingEdge(candidate, currentBest) {
-        let better = false;
-
-        if (currentBest === null) {
-            better = true;
-        } else if (candidate.weight < currentBest.weight) {
-            better = true;
-        } else if (candidate.weight === currentBest.weight) {
-            better = this.#compareCrossingEdges(candidate, currentBest) < 0;
-        }
-
-        return better;
-    }
-
-    /**
-     * Compare two crossing edges deterministically.
-     *
-     * @param {object} first - First edge.
-     * @param {object} second - Second edge.
-     * @returns {number} Comparison result.
-     */
-    #compareCrossingEdges(first, second) {
-        let result = String(first.from).localeCompare(String(second.from));
-
-        if (result === 0) {
-            result = String(first.to).localeCompare(String(second.to));
-        }
-
-        return result;
-    }
 }
+
 
 /**
  * Graph compose mode.
@@ -2519,7 +3196,6 @@ class ModeOptions {
 class App {
 
     graph = new Graph();
-
     #elements;
     #ctx;
     #uiState;
@@ -2531,6 +3207,11 @@ class App {
         this.#elements = this.#getElements();
         this.#ctx = this.#elements.canvas.getContext("2d");
         this.#uiState = this.#createUiState();
+
+        this._boundMouseUp = this.handleMouseUp.bind(this);
+        this._boundResize = this.resizeCanvas.bind(this);
+        this._boundKeyDown = this.#handleKeyDown.bind(this);
+
         this.#bindEvents();
         this.resizeCanvas();
         this.refreshNodeSelectors();
@@ -2538,6 +3219,18 @@ class App {
         this.#setStatus("Ready.");
         this.draw();
     }
+
+    /**
+     * Default yield configuration for async traversal plan creation.
+     */
+    static ASYNC_OPTIONS = Object.freeze({
+        yieldEvery: 50,
+        yieldFn: function defaultYield() {
+            return new Promise(function yieldPromise(resolve) {
+                window.setTimeout(resolve, 0);
+            });
+        }
+    });
 
     /**
      * Convert a positive one-based number to an alphabetic spreadsheet-style label.
@@ -2607,16 +3300,6 @@ class App {
                 behavior: "smooth"
             });
         }
-    }
-
-    /**
-     * Get the current traversal distance displayed for a node.
-     *
-     * @param {string} nodeId - Node id.
-     * @returns {number|undefined} Distance value.
-     */
-    getTraversalDistance(nodeId) {
-        return this.#uiState.traversal.distances.get(nodeId);
     }
 
     /**
@@ -2762,9 +3445,29 @@ class App {
         this.#elements.clearGraphBtn.addEventListener("click", this.clearGraph.bind(this));
         this.#elements.sampleGraphBtn.addEventListener("click", this.loadSampleGraph.bind(this));
 
-        window.addEventListener("mouseup", this.handleMouseUp.bind(this));
-        window.addEventListener("resize", this.resizeCanvas.bind(this));
-        window.addEventListener("keydown", this.#handleKeyDown.bind(this));
+        window.addEventListener("mouseup", this._boundMouseUp);
+        window.addEventListener("resize", this._boundResize);
+        window.addEventListener("keydown", this._boundKeyDown);
+
+        this.#enhanceAccessibility();
+    }
+
+    /**
+     * Add focus styling and ARIA metadata for the canvas.
+     */
+    #enhanceAccessibility() {
+        const self = this;
+
+        this.#elements.canvas.setAttribute('role', 'img');
+        this.#elements.canvas.setAttribute('aria-label', 'Interactive graph editor canvas');
+
+        this.#elements.canvas.addEventListener('focus', function handleFocus() {
+            self.#elements.canvas.style.outline = '2px solid #4ade80';
+        });
+
+        this.#elements.canvas.addEventListener('blur', function handleBlur() {
+            self.#elements.canvas.style.outline = 'none';
+        });
     }
 
     /**
@@ -3008,13 +3711,6 @@ class App {
     }
 
     /**
-     * Clear temporary selections used while composing graph changes.
-     */
-    #resetComposeSelection() {
-        this.#clearEditSelectionState();
-    }
-
-    /**
      * Undo the most recent graph history change and reset the transient UI state.
      */
     undoGraphChange() {
@@ -3043,7 +3739,7 @@ class App {
      */
     handleModeChange() {
         this.#setMode(this.#elements.modeSelect.value);
-        this.#resetComposeSelection();
+        this.#clearEditSelectionState();
         this.#setStatus("Mode changed.");
         this.draw();
     }
@@ -3075,7 +3771,8 @@ class App {
     handleDirectedToggle() {
         this.graph.saveHistory();
         this.graph.directed = this.#elements.directedToggle.checked;
-        this.#resetComposeSelection();
+        this.graph.rebuildEdgesOnDirectionChange();
+        this.#clearEditSelectionState();
         this.syncControls();
         this.#setStatus(this.graph.directed ? "Directed graph." : "Undirected graph.");
         this.draw();
@@ -3088,7 +3785,7 @@ class App {
     handleWeightedToggle() {
         this.graph.saveHistory();
         this.graph.weighted = this.#elements.weightedToggle.checked;
-        this.#resetComposeSelection();
+        this.#clearEditSelectionState();
 
         if (!this.graph.weighted) {
             this.graph.normalizeWeights();
@@ -3213,22 +3910,19 @@ class App {
         } else {
             this.#setMode("add-node");
             this.#cancelEdgeSource();
-            this.#handleAddNode(point, null);
+            this.#handleAddNode(point);
         }
     }
 
     /**
-     * Add a node at the pointer when no existing node blocks placement.
+     * Add a node at the pointer.
      *
      * @param {object} point - Pointer position.
-     * @param {Node|null} existingNode - Existing node at the pointer.
      */
-    #handleAddNode(point, existingNode) {
-        if (!existingNode) {
-            this.graph.addNode(point.x, point.y, this.#createNodeLabel());
-            this.refreshNodeSelectors();
-            this.#setStatus("Node added.");
-        }
+    #handleAddNode(point) {
+        this.graph.addNode(point.x, point.y, this.#createNodeLabel());
+        this.refreshNodeSelectors();
+        this.#setStatus("Node added.");
     }
 
     /**
@@ -3767,6 +4461,101 @@ class App {
     }
 
     /**
+     * Prepare a traversal plan without blocking the UI.
+     *
+     * @param {object} settings - Traversal settings.
+     * @returns {Promise<void>} Resolves when the plan is ready.
+     */
+    async #prepareTraversalAsync(settings) {
+        let traversal;
+        let validationMessage;
+        let plan;
+
+        traversal = Traversal.create(
+            settings.algorithm,
+            this.graph,
+            settings.startId,
+            settings.endId
+        );
+
+        validationMessage = traversal.validate();
+
+        if (validationMessage !== null) {
+            this.#setStatus(validationMessage);
+            return;
+        }
+
+        this.clearTraversal();
+        this.#setStatus("Building traversal plan...");
+
+        await App.ASYNC_OPTIONS.yieldFn();
+
+        try {
+            plan = await traversal.createPlanAsync(App.ASYNC_OPTIONS);
+            this.#uiState.traversal.plan = plan;
+            this.#uiState.traversal.index = 0;
+            this.#setStatus(plan.name + " ready.");
+        } catch (error) {
+            this.#setStatus("Failed to build traversal plan.");
+        }
+    }
+
+    /**
+     * Prepare and run the selected traversal animation.
+     */
+    async runTraversal() {
+        let settings = this.#getTraversalSettings();
+
+        if (!settings) {
+            return;
+        }
+
+        if (this.#uiState.traversal.running) {
+            this.#setStatus("Traversal is already running.");
+            return;
+        }
+
+        if (!this.#hasReusableTraversalPlan(settings)) {
+            await this.#prepareTraversalAsync(settings);
+        }
+
+        if (this.#uiState.traversal.plan && !this.#uiState.traversal.running) {
+            this.#uiState.traversal.running = true;
+            this.#uiState.traversal.token += 1;
+            await this.#animateTraversal(settings.delay, this.#uiState.traversal.token);
+        }
+    }
+
+    /**
+     * Advance the selected traversal by one step.
+     */
+    async stepTraversal() {
+        let settings = this.#getTraversalSettings();
+
+        if (!settings) {
+            return;
+        }
+
+        if (!this.#hasReusableTraversalPlan(settings)) {
+            await this.#prepareTraversalAsync(settings);
+        }
+
+        if (this.#uiState.traversal.plan) {
+            this.#stepPreparedTraversal();
+        }
+    }
+
+    /**
+     * Get the current traversal distance displayed for a node.
+     *
+     * @param {string} nodeId - Node id.
+     * @returns {number|undefined} Distance value.
+     */
+    getTraversalDistance(nodeId) {
+        return this.#uiState.traversal.distances.get(nodeId);
+    }
+
+    /**
      * Read and validate traversal settings from the UI.
      *
      * @returns {object|null} Traversal settings, or null when settings are invalid.
@@ -3797,62 +4586,6 @@ class App {
             endId: this.#elements.endNodeSelect.value || null,
             delay: Math.max(this.#elements.delayInput.min, Number(this.#elements.delayInput.value))
         };
-    }
-
-    /**
-     * Prepare and run the selected traversal animation.
-     */
-    async runTraversal() {
-        const settings = this.#getTraversalSettings();
-
-        if (settings && !this.#uiState.traversal.running) {
-            this.#prepareTraversal(settings);
-
-            if (this.#uiState.traversal.plan) {
-                this.#uiState.traversal.running = true;
-                this.#uiState.traversal.token += 1;
-
-                await this.#animateTraversal(settings.delay, this.#uiState.traversal.token);
-            }
-        } else if (this.#uiState.traversal.running) {
-            this.#setStatus("Traversal is already running.");
-        }
-    }
-
-    /**
-     * Advance the selected traversal by one step.
-     */
-    stepTraversal() {
-        const settings = this.#getTraversalSettings();
-
-        if (settings) {
-            if (!this.#hasReusableTraversalPlan(settings)) {
-                this.#prepareTraversal(settings);
-            }
-
-            if (this.#uiState.traversal.plan) {
-                this.#stepPreparedTraversal();
-            }
-        }
-    }
-
-    /**
-     * Create a fresh traversal plan from the current graph and settings.
-     *
-     * @param {object} settings - Traversal settings.
-     */
-    #prepareTraversal(settings) {
-        const traversal = Traversal.create(settings.algorithm, this.graph);
-        const validationMessage = traversal.validate();
-
-        if (validationMessage !== null) {
-            this.#setStatus(validationMessage);
-        } else {
-            this.clearTraversal();
-            this.#uiState.traversal.plan = traversal.createPlan(settings.startId, settings.endId);
-            this.#uiState.traversal.index = 0;
-            this.#setStatus(`${this.#uiState.traversal.plan.name} ready.`);
-        }
     }
 
     /**
@@ -3898,17 +4631,20 @@ class App {
         this.#setStatus("Traversal running.");
 
         while (this.#shouldContinueTraversal(token)) {
+            // Check token BEFORE advancing step to prevent glitch
+            if (token !== this.#uiState.traversal.token) break;
             this.#advanceTraversalStep();
-
             if (delay > 0) {
                 await this.#sleep(delay);
             }
         }
 
-        if (token === this.#uiState.traversal.token) {
+        // Double-check token before finishing
+        if (token === this.#uiState.traversal.token && this.#uiState.traversal.plan &&
+            this.#uiState.traversal.index >= this.#uiState.traversal.plan.steps.length) {
             this.#finishTraversal();
-            this.#uiState.traversal.running = false;
         }
+        this.#uiState.traversal.running = false;
     }
 
     /**
@@ -3940,74 +4676,84 @@ class App {
     }
 
     /**
-     * Apply render-state changes for one traversal step.
+     * Apply one traversal animation step to graph-render state and distance badges.
      *
-     * @param {object|undefined} step - Traversal step.
+     * @param {object} step - Traversal animation step.
      */
     #markTraversalStep(step) {
         if (step) {
-            this.#clearActiveTraversalStates();
-
-            if (step.type === "active") {
-                this.#markActiveTraversalEntity(step);
-            } else if (step.type === "visit") {
-                this.#markVisitedTraversalEntity(step);
+            if (step.type !== "discover") {
+                this.#clearExploringTraversalStates();
             }
 
-            if (step.distances) {
-                this.#uiState.traversal.distances = new Map(step.distances);
+            this.#markTraversalEntity(step, step.type);
+
+            if (step.distances) {// Apply distance deltas instead of replacing entire map
+                this.#applyDistanceDelta(step.distances);
             }
         }
     }
 
     /**
-     * Mark the node and edge involved in an active traversal step.
+     * Apply updated traversal distances to the UI distance map.
      *
-     * @param {object} step - Traversal step.
+     * @param {Map<string, number>|object} delta - Distance updates keyed by node id.
      */
-    #markActiveTraversalEntity(step) {
+    #applyDistanceDelta(delta) {
+        const self = this;
+        Object.entries(delta).forEach(function applyEntry(entry) {
+            self.#uiState.traversal.distances.set(entry[0], entry[1]);
+        });
+    }
+
+    /**
+     * Apply a traversal render state to the step node and optional step edge.
+     *
+     * @param {object} step - Traversal animation step.
+     * @param {string} stateName - Render state name.
+     */
+    #markTraversalEntity(step, stateName) {
         const node = this.graph.getNodeById(step.nodeId);
         const edge = step.edgeId ? this.graph.getEdgeById(step.edgeId) : null;
 
         if (node) {
-            node.renderState.active(true);
+            this.#applyTraversalState(node, stateName);
         }
-
         if (edge) {
-            edge.renderState.active(true);
+            this.#applyTraversalState(edge, stateName);
         }
     }
 
     /**
-     * Mark the node and incoming edge involved in a traversal visit step.
+     * Apply a traversal state transition to a node or edge.
      *
-     * @param {object} step - Traversal step.
+     * @param {Node|Edge} entity - Graph entity with render state.
+     * @param {string} stateName - Traversal state name.
      */
-    #markVisitedTraversalEntity(step) {
-        const node = this.graph.getNodeById(step.nodeId);
-        const edge = step.edgeId ? this.graph.getEdgeById(step.edgeId) : null;
-
-        if (node) {
-            node.renderState.visited(true);
-        }
-
-        if (edge) {
-            edge.renderState.visited(true);
+    #applyTraversalState(entity, stateName) {
+        if (stateName === "discover") {
+            entity.renderState.discovered(true);
+        } else if (stateName === "explore") {
+            entity.renderState.exploring(true);
+        } else if (stateName === "finish") {
+            entity.renderState.exploring(false);
+            entity.renderState.explored(true);
         }
     }
 
     /**
-     * Clear the active traversal state from every node and edge.
+     * Clear temporary exploring highlights from all nodes and edges.
      */
-    #clearActiveTraversalStates() {
+    #clearExploringTraversalStates() {
         this.graph.nodeMap.forEach(function clearNode(node) {
-            node.renderState.clearActive();
+            node.renderState.clearExploring();
         });
 
         this.graph.edgeMap.forEach(function clearEdge(edge) {
-            edge.renderState.clearActive();
+            edge.renderState.clearExploring();
         });
     }
+
 
     /**
      * Resolve after a delay.
@@ -4028,7 +4774,7 @@ class App {
         const plan = this.#uiState.traversal.plan;
 
         if (plan) {
-            this.#clearActiveTraversalStates();
+            this.#clearExploringTraversalStates();
             TraversalResult.markFinalPath(plan, this.graph);
             this.#elements.traversalOutput.innerHTML = TraversalResult.formatOutput(plan, this.graph);
             this.#setStatus(`${plan.name} complete.`);
@@ -4064,7 +4810,7 @@ class App {
     stopTraversal() {
         this.#uiState.traversal.running = false;
         this.#uiState.traversal.token += 1;
-        this.#clearActiveTraversalStates();
+        this.#clearExploringTraversalStates();
         this.#setStatus("Traversal stopped.");
         this.draw();
     }
@@ -4141,16 +4887,26 @@ class App {
     /**
      * Load the sample graph from the sample graph JSON file.
      */
-    loadSampleGraph() {
-        Graph.loadSampleAsync()
-            .then(function handleSampleData(data) {
-                this.graph.load(data);
-                this.#resetAfterGraphLoad();
-                this.#setStatus("Sample graph loaded.");
-            }.bind(this))
-            .catch(function handleSampleError(error) {
-                this.#setStatus(error.message);
-            }.bind(this));
+    async loadSampleGraph() {
+        const btn = this.#elements.sampleGraphBtn;
+        const originalText = btn.textContent;
+
+        try {
+            btn.disabled = true;
+            btn.textContent = "Loading...";
+            this.#setStatus("Loading sample graph...");
+
+            const data = await Graph.loadSampleAsync();
+            this.graph.load(data);
+            this.#resetAfterGraphLoad();
+            this.#setStatus("Sample graph loaded.");
+        } catch (error) {
+            this.#setStatus(`Failed: ${error.message}`);
+            btn.disabled = false;
+        } finally {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
     }
 
     /**
