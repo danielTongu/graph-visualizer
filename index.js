@@ -13,6 +13,16 @@ class RenderState {
     });
 
     static STYLE_OVERRIDES = Object.freeze({
+        hovered: Object.freeze({
+            fill: "#c084fc",
+            stroke: "#4c1d95"
+        }),
+
+        selected: Object.freeze({
+            fill: "#4c1d95",
+            stroke: "#c084fc"
+        }),
+
         discovered: Object.freeze({
             fill: "#78350f",
             stroke: "#f89d00",
@@ -34,16 +44,6 @@ class RenderState {
             fill: "#f87171",
             stroke: "#a80000",
             lineWidth: 4
-        }),
-
-        selected: Object.freeze({
-            fill: "#4c1d95",
-            stroke: "#c084fc"
-        }),
-
-        hovered: Object.freeze({
-            fill: "#c084fc",
-            stroke: "#4c1d95"
         })
     });
 
@@ -132,9 +132,7 @@ class RenderState {
 
     /**
      * Resolve the active draw style for the current render state.
-     *
-     * State precedence (highest wins):
-     * discovered < explored < path < selected < hovered < exploring
+     * State precedence (highest wins): discovered < explored < path < selected < hovered < exploring
      *
      * @returns {object} Active draw style.
      */
@@ -525,7 +523,7 @@ class Edge {
     static HIT_TOLERANCE = 8;
     static ARROW_SIZE = 10;
     static ARROW_ANGLE = Math.PI / 6;
-    static WEIGHT_FONT = "8px Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif";
+    static WEIGHT_FONT = "bold 8px Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif";
 
     /**
      * Create an edge.
@@ -2289,8 +2287,8 @@ class Traversal {
 /**
  * Builds Breadth-First Search traversal plans.
  *
- * BFS explores nodes in FIFO order, guaranteeing the shortest paths in
- * unweighted graphs. Yields to the browser every N nodes for large graphs.
+ * BFS explores nodes in FIFO order, guaranteeing the shortest paths in unweighted graphs.
+ * Yields to the browser every N nodes for large graphs.
  */
 class BreadthFirst extends Traversal {
 
@@ -2410,8 +2408,7 @@ class BreadthFirst extends Traversal {
  * Builds Depth-First Search traversal plans.
  *
  * DFS explores as far as possible along each branch before backtracking.
- * Uses an explicit stack to avoid recursion depth limits and yields
- * periodically to keep the UI responsive.
+ * Uses an explicit stack to avoid recursion depth limits and yields periodically to keep the UI responsive.
  *
  * Stack frames alternate between:
  * - "enter": Discover and begin exploring a node.
@@ -2605,8 +2602,8 @@ class ShortestPathTraversal extends Traversal {
 /**
  * Builds Dijkstra shortest-path traversal plans.
  *
- * Dijkstra greedily selects the nearest unexplored node and relaxes its
- * outgoing edges. Yields to the browser after processing chunks of nodes.
+ * Dijkstra greedily selects the nearest unexplored node and relaxes its outgoing edges.
+ * Yields to the browser after processing chunks of nodes.
  */
 class Dijkstra extends ShortestPathTraversal {
 
@@ -3207,10 +3204,14 @@ class App {
         this.#elements = this.#getElements();
         this.#ctx = this.#elements.canvas.getContext("2d");
         this.#uiState = this.#createUiState();
-
-        this._boundMouseUp = this.handleMouseUp.bind(this);
         this._boundResize = this.resizeCanvas.bind(this);
         this._boundKeyDown = this.#handleKeyDown.bind(this);
+
+        this._resizeObserver = new ResizeObserver(
+            this.resizeCanvas.bind(this)
+        );
+
+        this._resizeObserver.observe(this.#elements.canvas);
 
         this.#bindEvents();
         this.resizeCanvas();
@@ -3321,7 +3322,9 @@ class App {
 
             drag: {
                 nodeId: null,
-                moved: false
+                moved: false,
+                startX: 0,
+                startY: 0
             },
 
             viewport: {
@@ -3355,10 +3358,8 @@ class App {
             weightedToggle: document.getElementById("weighted-toggle"),
 
             modeSelect: document.querySelector("#graph-mode select"),
-
             nodeLabelModeSelect: document.getElementById("node-label-mode-select"),
             defaultNodeRadiusInput: document.getElementById("default-node-radius-input"),
-
             saveLocalBtn: document.getElementById("save-local-btn"),
             loadLocalBtn: document.getElementById("load-local-btn"),
             clearGraphBtn: document.getElementById("clear-graph-btn"),
@@ -3366,30 +3367,23 @@ class App {
 
             edgeWeightRow: document.getElementById("edge-weight-row"),
             edgeWeightInput: document.getElementById("edge-weight-input"),
-
             editEmptyHelp: document.getElementById("edit-empty-help"),
             nodeEditControls: document.getElementById("node-edit-controls"),
             edgeEditControls: document.getElementById("edge-edit-controls"),
             editButtons: document.getElementById("edit-buttons"),
-
             editNodeLabelInput: document.getElementById("edit-node-label-input"),
             editNodeRadiusInput: document.getElementById("edit-node-radius-input"),
-
             editEdgeWeightRow: document.getElementById("edit-edge-weight-row"),
             editEdgeWeightInput: document.getElementById("edit-edge-weight-input"),
-
             edgeUnweightedHelp: document.getElementById("edge-unweighted-help"),
-
             applyEditBtn: document.getElementById("apply-edit-btn"),
             clearEditSelectionBtn: document.getElementById("clear-edit-selection-btn"),
 
             startNodeSelect: document.getElementById("start-node-select"),
             endNodeSelect: document.getElementById("end-node-select"),
             algorithmSelect: document.getElementById("algorithm-select"),
-
             delayInput: document.getElementById("delay-input"),
             traversalOutput: document.getElementById("traversal-output"),
-
             runTraversalBtn: document.getElementById("run-traversal-btn"),
             stepTraversalBtn: document.getElementById("step-traversal-btn"),
             clearTraversalBtn: document.getElementById("clear-traversal-btn"),
@@ -3397,11 +3391,13 @@ class App {
 
             exportBtn: document.getElementById("export-btn"),
             importBtn: document.getElementById("import-btn"),
-
             jsonArea: document.getElementById("json-area"),
 
+            zoomOutBtn: document.getElementById("zoom-out-btn"),
+            zoomResetBtn: document.getElementById("zoom-reset-btn"),
+            zoomInBtn: document.getElementById("zoom-in-btn"),
+            statusBoxes: document.querySelectorAll(".graph-status"),
             canvas: document.querySelector("#graph-editor canvas"),
-            statusBox: document.getElementById("graph-status")
         };
     }
 
@@ -3409,27 +3405,25 @@ class App {
      * Bind all DOM event listeners used by the graph editor.
      */
     #bindEvents() {
-        this.#elements.modeSelect.addEventListener("change", this.handleModeChange.bind(this));
+        this.#elements.directedToggle.addEventListener("change", this.handleDirectedToggle.bind(this));
+        this.#elements.weightedToggle.addEventListener("change", this.handleWeightedToggle.bind(this));
 
+        this.#elements.modeSelect.addEventListener("change", this.handleModeChange.bind(this));
         this.#elements.nodeLabelModeSelect.addEventListener("change", this.handleNodeLabelModeChange.bind(this));
         this.#elements.defaultNodeRadiusInput.addEventListener("input", this.handleDefaultNodeRadiusInput.bind(this));
 
-        this.#elements.directedToggle.addEventListener("change", this.handleDirectedToggle.bind(this));
-        this.#elements.weightedToggle.addEventListener("change", this.handleWeightedToggle.bind(this));
         this.#elements.edgeWeightInput.addEventListener("input", this.handleEdgeWeightDraft.bind(this));
-
         this.#elements.editNodeLabelInput.addEventListener("input", this.handleEditNodeLabelInput.bind(this));
         this.#elements.editNodeRadiusInput.addEventListener("input", this.handleEditNodeRadiusInput.bind(this));
         this.#elements.editEdgeWeightInput.addEventListener("input", this.handleEditEdgeWeightInput.bind(this));
 
         this.#elements.applyEditBtn.addEventListener("click", this.applyEditSelection.bind(this));
         this.#elements.clearEditSelectionBtn.addEventListener("click", this.clearEditSelection.bind(this));
+        this.#elements.saveLocalBtn.addEventListener("click", this.saveLocal.bind(this));
+        this.#elements.loadLocalBtn.addEventListener("click", this.loadLocal.bind(this));
 
-        this.#elements.canvas.addEventListener("dblclick", this.handleCanvasDoubleClick.bind(this));
-        this.#elements.canvas.addEventListener("click", this.handleCanvasClick.bind(this));
-        this.#elements.canvas.addEventListener("mousedown", this.handleMouseDown.bind(this));
-        this.#elements.canvas.addEventListener("mousemove", this.handleMouseMove.bind(this));
-        this.#elements.canvas.addEventListener("wheel", this.handleWheel.bind(this), {passive: false});
+        this.#elements.clearGraphBtn.addEventListener("click", this.clearGraph.bind(this));
+        this.#elements.sampleGraphBtn.addEventListener("click", this.loadSampleGraph.bind(this));
 
         this.#elements.runTraversalBtn.addEventListener("click", this.runTraversal.bind(this));
         this.#elements.stepTraversalBtn.addEventListener("click", this.stepTraversal.bind(this));
@@ -3439,13 +3433,18 @@ class App {
         this.#elements.exportBtn.addEventListener("click", this.exportGraph.bind(this));
         this.#elements.importBtn.addEventListener("click", this.importGraph.bind(this));
 
-        this.#elements.saveLocalBtn.addEventListener("click", this.saveLocal.bind(this));
-        this.#elements.loadLocalBtn.addEventListener("click", this.loadLocal.bind(this));
+        this.#elements.zoomOutBtn.addEventListener("click", this.zoomOut.bind(this));
+        this.#elements.zoomResetBtn.addEventListener("click", this.zoomReset.bind(this));
+        this.#elements.zoomInBtn.addEventListener("click", this.zoomIn.bind(this));
 
-        this.#elements.clearGraphBtn.addEventListener("click", this.clearGraph.bind(this));
-        this.#elements.sampleGraphBtn.addEventListener("click", this.loadSampleGraph.bind(this));
+        this.#elements.canvas.addEventListener("dblclick", this.handleCanvasDoubleClick.bind(this));
+        this.#elements.canvas.addEventListener("click", this.handleCanvasClick.bind(this));
+        this.#elements.canvas.addEventListener("pointerdown", this.handlePointerDown.bind(this));
+        this.#elements.canvas.addEventListener("pointermove", this.handlePointerMove.bind(this));
+        this.#elements.canvas.addEventListener("pointerup", this.handlePointerUp.bind(this));
+        this.#elements.canvas.addEventListener("pointercancel", this.handlePointerUp.bind(this));
+        this.#elements.canvas.addEventListener("wheel", this.handleWheel.bind(this), {passive: false});
 
-        window.addEventListener("mouseup", this._boundMouseUp);
         window.addEventListener("resize", this._boundResize);
         window.addEventListener("keydown", this._boundKeyDown);
 
@@ -3489,14 +3488,19 @@ class App {
     }
 
     /**
-     * Resize the canvas for the current CSS size and device pixel ratio.
+     * Resize the canvas drawing buffer to match the rendered CSS size.
      */
     resizeCanvas() {
+        const canvas = this.#elements.canvas;
         const dpr = window.devicePixelRatio || 1;
-        const rect = this.#elements.canvas.getBoundingClientRect();
+        const width = Math.round(canvas.clientWidth * dpr);
+        const height = Math.round(canvas.clientHeight * dpr);
 
-        this.#elements.canvas.width = Math.floor(rect.width * dpr);
-        this.#elements.canvas.height = Math.floor(rect.height * dpr);
+        if (canvas.width !== width || canvas.height !== height) {
+            canvas.width = width;
+            canvas.height = height;
+        }
+
         this.#ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         this.draw();
     }
@@ -3520,29 +3524,63 @@ class App {
     }
 
     /**
-     * Draw the viewport-aware background grid.
+     * Draw viewport-aware minor and major grid lines.
+     *
+     * Minor lines help when nearby nodes differ by only a few units.
+     * Major lines stay readable while zooming.
      *
      * @param {number} width - Canvas CSS width.
      * @param {number} height - Canvas CSS height.
      */
     #drawGrid(width, height) {
         const viewport = this.#uiState.viewport;
-        const spacing = 30 * viewport.scale;
-        const startX = ((viewport.x % spacing) + spacing) % spacing;
-        const startY = ((viewport.y % spacing) + spacing) % spacing;
+        const minorWorldSpacing = 10;
+        const majorEvery = 5;
+
+        this.#drawGridLayer(width, height, minorWorldSpacing, viewport, "rgba(148, 163, 184, 0.05)", 1);
+
+        this.#drawGridLayer(
+            width,
+            height,
+            minorWorldSpacing * majorEvery,
+            viewport,
+            "rgba(148, 163, 184, 0.12)",
+            1
+        );
+    }
+
+    /**
+     * Draws one grid layer for world-space spacing.
+     *
+     * @param {number} width - Canvas CSS width.
+     * @param {number} height - Canvas CSS height.
+     * @param {number} worldSpacing - Grid spacing in graph-world units.
+     * @param {object} viewport - Current viewport state.
+     * @param {string} strokeStyle - Grid line color.
+     * @param {number} lineWidth - Grid line width.
+     */
+    #drawGridLayer(width, height, worldSpacing, viewport, strokeStyle, lineWidth) {
+        const screenSpacing = worldSpacing * viewport.scale;
+
+        if (screenSpacing < 4) { // Very important guard!
+            return;
+        }
+
+        const startX = ((viewport.x % screenSpacing) + screenSpacing) % screenSpacing;
+        const startY = ((viewport.y % screenSpacing) + screenSpacing) % screenSpacing;
 
         this.#ctx.save();
-        this.#ctx.strokeStyle = "rgba(148, 163, 184, 0.08)";
-        this.#ctx.lineWidth = 1;
+        this.#ctx.strokeStyle = strokeStyle;
+        this.#ctx.lineWidth = lineWidth;
 
-        for (let x = startX; x <= width; x += spacing) {
+        for (let x = startX; x <= width; x += screenSpacing) {
             this.#ctx.beginPath();
             this.#ctx.moveTo(x, 0);
             this.#ctx.lineTo(x, height);
             this.#ctx.stroke();
         }
 
-        for (let y = startY; y <= height; y += spacing) {
+        for (let y = startY; y <= height; y += screenSpacing) {
             this.#ctx.beginPath();
             this.#ctx.moveTo(0, y);
             this.#ctx.lineTo(width, y);
@@ -3665,7 +3703,9 @@ class App {
      * @param {string} message - Status message.
      */
     #setStatus(message) {
-        this.#elements.statusBox.textContent = message;
+        for (let box of this.#elements.statusBoxes) {
+            box.textContent = message;
+        }
     }
 
     /**
@@ -3801,7 +3841,6 @@ class App {
      */
     handleEdgeWeightDraft() {
         const parsed = Number(this.#elements.edgeWeightInput.value);
-
         if (Number.isFinite(parsed)) {
             this.#uiState.edgeWeightDraft = parsed;
         }
@@ -3877,7 +3916,7 @@ class App {
 
         if (!node && !edge) {
             this.#handleEmptyCanvasClick(point);
-        } else if (this.#uiState.mode === "add-edge") {
+        } else if (this.#uiState.mode === "add-edge" && node) {
             this.#handleAddEdgeMode(node);
         } else if (this.#isCurrentEditNode(node)) {
             this.#startEdgeFromSelectedNode(node);
@@ -3900,29 +3939,22 @@ class App {
 
     /**
      * Handle an empty canvas click.
-     * Empty clicks clear existing selections before creating new nodes.
+     * The first empty click exits the current non-add-node mode.
+     * The next empty click adds a node.
      *
      * @param {object} point - Pointer position.
      */
     #handleEmptyCanvasClick(point) {
-        if (this.#uiState.editSelection || this.#uiState.selectedNodeIdForEdge !== null) {
-            this.clearEditSelection("Selection cleared.");
-        } else {
+        if (this.#uiState.mode !== "add-node") {
             this.#setMode("add-node");
             this.#cancelEdgeSource();
-            this.#handleAddNode(point);
+            this.#clearEditSelectionState();
+            this.#setStatus("<Add Node>");
+        } else {
+            this.graph.addNode(point.x, point.y, this.#createNodeLabel());
+            this.refreshNodeSelectors();
+            this.#setStatus("Node added.");
         }
-    }
-
-    /**
-     * Add a node at the pointer.
-     *
-     * @param {object} point - Pointer position.
-     */
-    #handleAddNode(point) {
-        this.graph.addNode(point.x, point.y, this.#createNodeLabel());
-        this.refreshNodeSelectors();
-        this.#setStatus("Node added.");
     }
 
     /**
@@ -3979,7 +4011,7 @@ class App {
         node.renderState.selected(true);
 
         this.syncControls();
-        this.#setStatus(`Source node ${node.label} selected.`);
+        this.#setStatus(`<add edge> Source selected: node ${node.label}`);
     }
 
     /**
@@ -3989,7 +4021,6 @@ class App {
         this.#uiState.selectedNodeIdForEdge = null;
         this.#clearSelectedState();
         this.syncControls();
-        this.#setStatus("Edge selection canceled.");
     }
 
     /**
@@ -4041,8 +4072,16 @@ class App {
      * @param {Node|null} node - Clicked node.
      * @param {Edge|null} edge - Clicked edge.
      */
+    /**
+     * Handle selecting or unselecting a node or edge for editing.
+     *
+     * @param {Node|null} node - Clicked node.
+     * @param {Edge|null} edge - Clicked edge.
+     */
     #handleEditMode(node, edge) {
-        if (this.#isRepeatedEditSelection(node, edge)) {
+        const repeated = this.#isRepeatedEditSelection(node, edge);
+
+        if (repeated) {
             this.clearEditSelection("Selection cleared.");
         } else {
             this.#clearSelectedState();
@@ -4050,11 +4089,11 @@ class App {
             if (node) {
                 this.#uiState.editSelection = this.#createNodeEditSelection(node);
                 node.renderState.selected(true);
-                this.#setStatus(`Loaded node ${node.label}.`);
+                this.#setStatus(`<Edit Node> ${node.label}.`);
             } else if (edge) {
                 this.#uiState.editSelection = this.#createEdgeEditSelection(edge);
                 edge.renderState.selected(true);
-                this.#setStatus("Loaded edge.");
+                this.#setStatus(`<Edit Edge> ${edge.weight}`);
             }
 
             this.syncControls();
@@ -4232,11 +4271,13 @@ class App {
     }
 
     /**
-     * Start node dragging or viewport panning from a mouse-down event.
+     * Start node dragging or viewport panning from a pointer-down event.
      *
-     * @param {MouseEvent} event - Mouse event.
+     * @param {PointerEvent} event - Pointer event.
      */
-    handleMouseDown(event) {
+    handlePointerDown(event) {
+        this.#elements.canvas.setPointerCapture(event.pointerId);
+
         const point = this.#getPointer(event);
         const node = this.graph.findNodeAt(point.x, point.y);
         const shouldPan = event.button === 1 || event.altKey || !node;
@@ -4244,17 +4285,19 @@ class App {
         if (node && !shouldPan) {
             this.#uiState.drag.nodeId = node.id;
             this.#uiState.drag.moved = false;
+            this.#uiState.drag.startX = point.x;
+            this.#uiState.drag.startY = point.y;
         } else if (shouldPan) {
             this.#startPan(point);
         }
     }
 
     /**
-     * Update hover state, node dragging, or viewport panning during mouse movement.
+     * Update hover state, node dragging, or viewport panning during pointer movement.
      *
-     * @param {MouseEvent} event - Mouse event.
+     * @param {PointerEvent} event - Pointer event.
      */
-    handleMouseMove(event) {
+    handlePointerMove(event) {
         const point = this.#getPointer(event);
 
         if (this.#uiState.viewport.dragging) {
@@ -4269,8 +4312,14 @@ class App {
 
     /**
      * Finish any active node drag or viewport pan.
+     *
+     * @param {PointerEvent} event - Pointer event.
      */
-    handleMouseUp() {
+    handlePointerUp(event) {
+        if (this.#elements.canvas.hasPointerCapture(event.pointerId)) {
+            this.#elements.canvas.releasePointerCapture(event.pointerId);
+        }
+
         if (this.#uiState.drag.nodeId !== null) {
             this.#finishNodeDrag();
         }
@@ -4317,21 +4366,27 @@ class App {
     }
 
     /**
-     * Move the currently dragged node to the pointer position.
-     * The first actual movement records the undo history.
+     * Move the currently dragged node after the pointer exceeds a drag threshold.
      *
      * @param {object} point - Pointer position.
      */
     #moveDraggedNode(point) {
         const node = this.graph.getNodeById(this.#uiState.drag.nodeId);
+        const dragThreshold = 4;
 
         if (node) {
-            if (!this.#uiState.drag.moved && (node.x !== point.x || node.y !== point.y)) {
-                this.graph.saveHistory();
-                this.#uiState.drag.moved = true;
-            }
+            const dx = point.x - this.#uiState.drag.startX;
+            const dy = point.y - this.#uiState.drag.startY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
 
-            node.moveTo(point.x, point.y);
+            if (distance >= dragThreshold) {
+                if (!this.#uiState.drag.moved) {
+                    this.graph.saveHistory();
+                    this.#uiState.drag.moved = true;
+                }
+
+                node.moveTo(point.x, point.y);
+            }
         }
     }
 
@@ -4349,20 +4404,20 @@ class App {
     }
 
     /**
-     * Move the viewport by the pointer delta since the last pan update.
+     * Move the viewport by the pointer delta after the pointer exceeds a pan threshold.
      *
      * @param {object} point - Pointer position.
      */
     #panViewport(point) {
         const dx = point.screenX - this.#uiState.viewport.lastX;
         const dy = point.screenY - this.#uiState.viewport.lastY;
+        const panThreshold = 4;
 
-        this.#uiState.viewport.x += dx;
-        this.#uiState.viewport.y += dy;
-        this.#uiState.viewport.lastX = point.screenX;
-        this.#uiState.viewport.lastY = point.screenY;
-
-        if (Math.abs(dx) + Math.abs(dy) > 1) {
+        if (Math.abs(dx) + Math.abs(dy) >= panThreshold) {
+            this.#uiState.viewport.x += dx;
+            this.#uiState.viewport.y += dy;
+            this.#uiState.viewport.lastX = point.screenX;
+            this.#uiState.viewport.lastY = point.screenY;
             this.#uiState.viewport.moved = true;
         }
     }
@@ -4382,13 +4437,63 @@ class App {
      */
     handleWheel(event) {
         event.preventDefault();
-
         const point = this.#getPointer(event);
-        const zoomFactor = event.deltaY < 0 ? 1.1 : 0.9;
-        const newScale = Math.max(0.2, Math.min(4, this.#uiState.viewport.scale * zoomFactor));
-        this.#uiState.viewport.x = point.screenX - point.x * newScale;
-        this.#uiState.viewport.y = point.screenY - point.y * newScale;
-        this.#uiState.viewport.scale = newScale;
+        this.#zoomViewport(point.screenX, point.screenY, point.x, point.y, event.deltaY < 0 ? 1.1 : 0.9);
+    }
+
+    /**
+     * Zoom the viewport around a fixed world-space point.
+     *
+     * @param {number} screenX - Screen-space X coordinate.
+     * @param {number} screenY - Screen-space Y coordinate.
+     * @param {number} worldX - World-space X coordinate.
+     * @param {number} worldY - World-space Y coordinate.
+     * @param {number} factor - Zoom multiplier.
+     */
+    #zoomViewport(screenX, screenY, worldX, worldY, factor) {
+        const viewport = this.#uiState.viewport;
+        const newScale = Math.max(0.05, Math.min(100, viewport.scale * factor));
+
+        viewport.x = screenX - worldX * newScale;
+        viewport.y = screenY - worldY * newScale;
+        viewport.scale = newScale;
+
+        this.draw();
+    }
+
+    /**
+     * Zoom around the visual center of the canvas.
+     *
+     * @param {number} factor - Zoom multiplier.
+     */
+    #zoomCanvasCenter(factor) {
+        const canvas = this.#elements.canvas;
+        const viewport = this.#uiState.viewport;
+        const screenX = canvas.clientWidth / 2;
+        const screenY = canvas.clientHeight / 2;
+        const worldX = (screenX - viewport.x) / viewport.scale;
+        const worldY = (screenY - viewport.y) / viewport.scale;
+
+        this.#zoomViewport(screenX, screenY, worldX, worldY, factor);
+    }
+
+    zoomIn() {
+        this.#zoomCanvasCenter(1.25);
+    }
+
+    zoomOut() {
+        this.#zoomCanvasCenter(0.8);
+    }
+
+    /**
+     * Reset viewport zoom and pan to the default state.
+     */
+    zoomReset() {
+        const viewport = this.#uiState.viewport;
+        viewport.x = 0;
+        viewport.y = 0;
+        viewport.scale = 1;
+
         this.draw();
     }
 
@@ -4610,7 +4715,6 @@ class App {
         const plan = this.#uiState.traversal.plan;
 
         if (plan && this.#uiState.traversal.index < plan.steps.length) {
-            this.#setStatus("Traversal running.");
             this.#advanceTraversalStep();
 
             if (this.#uiState.traversal.index >= plan.steps.length) {
@@ -4666,12 +4770,13 @@ class App {
 
         if (plan && this.#uiState.traversal.index < plan.steps.length) {
             const step = plan.steps[this.#uiState.traversal.index];
-
             this.#markTraversalStep(step);
             this.#uiState.traversal.index += 1;
-            this.#elements.traversalOutput.textContent =
-                `${plan.name} step ${this.#uiState.traversal.index} of ${plan.steps.length}.`;
+
+            const status = `${plan.name} step ${this.#uiState.traversal.index} of ${plan.steps.length}.`;
+            this.#elements.traversalOutput.textContent = status
             this.draw();
+            this.#setStatus(status);
         }
     }
 
@@ -4688,7 +4793,7 @@ class App {
 
             this.#markTraversalEntity(step, step.type);
 
-            if (step.distances) {// Apply distance deltas instead of replacing entire map
+            if (step.distances) { // Apply distance deltas instead of replacing entire map
                 this.#applyDistanceDelta(step.distances);
             }
         }
