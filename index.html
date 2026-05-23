@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <title>Graph Visualizer - Interactive BFS, DFS, Dijkstra, Prim, Bellman-Ford Tool</title>
-    <meta content="Interactive graph visualizer for creating, editing, and animating BFS, DFS, Prim, Dijkstra, and Bellman-Ford graph algorithms." name="description">
+    <meta content="Interactive graph visualizer for creating, editing, and animating BFS, DFS, Prim, Dijkstra, and Bellman-Ford graph algorithms."
+          name="description">
     <meta content="index, follow" name="robots">
     <meta content="1y4PstMN0Q7yR-3xCeDPlAHfFBGO3HrWMhTDX8tGJnk" name="google-site-verification">
     <link href="https://danieltongu.github.io/graph-visualizer/" rel="canonical">
@@ -30,152 +31,167 @@
             <li>local saves, import/export, undo, and redo</li>
         </ul>
     </header>
-    <aside class="hide-scrollbar">
-        <dl id="compose">
-            <dt>Compose</dt>
-            <dd id="graph-options">
-                <label>
-                    <span>Directed:</span>
-                    <input id="directed-toggle" type="checkbox">
-                </label>
-                <label>
-                    <span>Weighted:</span>
-                    <input id="weighted-toggle" type="checkbox">
-                </label>
-            </dd>
-            <dd id="graph-mode">
-                <label>
-                    <span>Mode:</span>
-                    <select>
-                        <option value="add-node">Add Node</option>
-                        <option value="add-edge">Add Edge</option>
-                        <option value="edit">Edit</option>
-                    </select>
-                </label>
-            </dd>
-            <dd id="mode-panel">
-                <section id="panel-add-node">
+    <div id="workspace">
+        <aside class="hide-scrollbar">
+            <dl id="compose">
+                <dt>Compose</dt>
+                <dd id="graph-options">
                     <label>
-                        <span>Node Label Style:</span>
-                        <select id="node-label-mode-select">
-                            <option value="numeric">Numeric: 1, 2, 3</option>
-                            <option value="alphabetic">Alphabetic: A, B, C</option>
+                        <span>Directed:</span>
+                        <input id="directed-toggle" type="checkbox">
+                    </label>
+                    <label>
+                        <span>Weighted:</span>
+                        <input id="weighted-toggle" type="checkbox">
+                    </label>
+                </dd>
+                <dd id="graph-mode">
+                    <label>
+                        <span>Mode:</span>
+                        <select>
+                            <option value="add-node">Add Node</option>
+                            <option value="add-edge">Add Edge</option>
+                            <option value="edit">Edit</option>
                         </select>
                     </label>
-                    <label>
-                        <span>Node Radius:</span>
-                        <input id="default-node-radius-input" min="1" step="1" type="number" value="20">
-                    </label>
-                </section>
-                <section hidden id="panel-add-edge">
-                    <label hidden id="edge-weight-row">
-                        <span>Edge Weight:</span>
-                        <input id="edge-weight-input" step="any" type="number" value="1">
-                    </label>
-                    <small>Click source node, then destination node.</small>
-                </section>
-                <section hidden id="panel-edit">
-                    <small id="edit-empty-help">Click node or edge to edit, then apply.</small>
-                    <div hidden id="node-edit-controls">
+                </dd>
+                <dd id="mode-panel">
+                    <section id="panel-add-node">
                         <label>
-                            <span>Node Label:</span>
-                            <input id="edit-node-label-input" type="text">
+                            <span>Node Label Style:</span>
+                            <select id="node-label-mode-select">
+                                <option value="numeric">Numeric: 1, 2, 3</option>
+                                <option value="alphabetic">Alphabetic: A, B, C</option>
+                            </select>
                         </label>
                         <label>
                             <span>Node Radius:</span>
-                            <input id="edit-node-radius-input" min="1" step="1" type="number">
+                            <input id="default-node-radius-input" min="1" step="1" type="number" value="20">
                         </label>
-                    </div>
-                    <div hidden id="edge-edit-controls">
-                        <label id="edit-edge-weight-row">
+                    </section>
+                    <section hidden id="panel-add-edge">
+                        <label hidden id="edge-weight-row">
                             <span>Edge Weight:</span>
-                            <input id="edit-edge-weight-input" step="any" type="number">
+                            <input id="edge-weight-input" step="any" type="number" value="1">
                         </label>
-                        <small hidden id="edge-unweighted-help">Weighted mode is off, weight fixed at 1.</small>
+                        <small>Click source node, then destination node.</small>
+                    </section>
+                    <section hidden id="panel-edit">
+                        <small id="edit-empty-help">Click node or edge to edit, then apply.</small>
+                        <div hidden id="node-edit-controls">
+                            <label>
+                                <span>Node Label:</span>
+                                <input id="edit-node-label-input" type="text">
+                            </label>
+                            <label>
+                                <span>Node Radius:</span>
+                                <input id="edit-node-radius-input" min="1" step="1" type="number">
+                            </label>
+                        </div>
+                        <div hidden id="edge-edit-controls">
+                            <label id="edit-edge-weight-row">
+                                <span>Edge Weight:</span>
+                                <input id="edit-edge-weight-input" step="any" type="number">
+                            </label>
+                            <small hidden id="edge-unweighted-help">Weighted mode is off, weight fixed at 1.</small>
+                        </div>
+                        <div class="button-group" hidden id="edit-buttons">
+                            <button class="success" id="apply-edit-btn">Apply</button>
+                            <button class="primary" id="clear-edit-selection-btn">Cancel</button>
+                        </div>
+                    </section>
+                </dd>
+                <dd class="button-group">
+                    <button class="danger" id="clear-graph-btn" title="clear">C</button>
+                    <button class="primary" id="save-local-btn" title="memorize">M+</button>
+                    <button class="success" id="load-local-btn" title="remember">MR</button>
+                </dd>
+                <dd>
+                    <button id="sample-graph-btn">Load Sample Graph</button>
+                </dd>
+            </dl>
+            <dl id="traverse">
+                <dt>Traverse</dt>
+                <dd>
+                    <label>
+                        <span>Algorithm:</span>
+                        <select id="algorithm-select">
+                            <option value="BFS">BFS</option>
+                            <option value="DFS">DFS</option>
+                            <option value="Prim">MST (Prim)</option>
+                            <option value="Dijkstra">Path (Dijkstra)</option>
+                            <option value="Bellman-Ford">Path (Bellman-Ford)</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>Start:</span>
+                        <select id="start-node-select"></select>
+                    </label>
+                    <label>
+                        <span>End (optional):</span>
+                        <select id="end-node-select"></select>
+                    </label>
+                    <label>
+                        <span>Delay (ms):</span>
+                        <input id="delay-input" min="0" step="5" type="number" value="5">
+                    </label>
+                    <div class="button-group">
+                        <button class="primary" id="step-traversal-btn" title="Step traversal" type="button">⤷</button>
+                        <button class="success" id="run-traversal-btn" title="Play traversal" type="button">▶</button>
+                        <button class="danger" id="stop-traversal-btn" title="Stop traversal" type="button">■</button>
+                        <button class="warn" id="clear-traversal-btn" title="Clear traversal" type="button">×</button>
                     </div>
-                    <div class="button-group" hidden id="edit-buttons">
-                        <button class="success" id="apply-edit-btn">Apply</button>
-                        <button class="primary" id="clear-edit-selection-btn">Cancel</button>
+                    <div id="traversal-output" title="Traversal output will appear here."></div>
+                </dd>
+            </dl>
+            <dl id="transport">
+                <dt>Transport</dt>
+                <dd>
+                    <div class="button-group">
+                        <button id="export-btn">Export</button>
+                        <button id="import-btn">Import</button>
+                    </div>
+                    <textarea id="json-area"
+                              placeholder="Exported graph JSON appears here. Paste graph JSON here to import."></textarea>
+                </dd>
+            </dl>
+            <nav>
+                <button data-target="compose" type="button"></button>
+                <button data-target="traverse" type="button"></button>
+                <button data-target="transport" type="button"></button>
+            </nav>
+        </aside>
+        <main id="graph-editor">
+            <header>
+                <ul id="interaction-help">
+                    <li>Single click node/edge = edit</li>
+                    <li>Double click node/edge = delete</li>
+                    <li>Drag node = move</li>
+                    <li>Alt+drag = pan</li>
+                    <li>Wheel = zoom</li>
+                    <li>Click { - / R / + } = zoom</li>
+                </ul>
+                <section>
+                    <div class="hide-scrollbar" id="legend" title="Legend">
+                        <label data-text="Node"><span></span></label>
+                        <label data-text="Selected"><span></span></label>
+                        <label data-text="Exploring"><span></span></label>
+                        <label data-text="Explored"><span></span></label>
+                        <label data-text="Path/MST"><span></span></label>
+                    </div>
+                    <div id="zoom-controls">
+                        <button class="primary" id="zoom-out-btn" type="button"></button>
+                        <button class="primary" id="zoom-reset-btn" type="button" title="Reset zoom"></button>
+                        <button class="primary" id="zoom-in-btn" type="button"></button>
                     </div>
                 </section>
-            </dd>
-            <dd class="button-group">
-                <button class="danger" id="clear-graph-btn" title="clear">C</button>
-                <button class="success" id="save-local-btn" title="memorize">M+</button>
-                <button class="warn" id="load-local-btn" title="remember">MR</button>
-            </dd>
-            <dd><button id="sample-graph-btn">Load Sample Graph</button></dd>
-        </dl>
-        <dl id="traverse">
-            <dt>Traverse</dt>
-            <dd>
-                <label>
-                    <span>Algorithm:</span>
-                    <select id="algorithm-select">
-                        <option value="BFS">BFS</option>
-                        <option value="DFS">DFS</option>
-                        <option value="Prim">MST (Prim)</option>
-                        <option value="Dijkstra">Path (Dijkstra)</option>
-                        <option value="Bellman-Ford">Path (Bellman-Ford)</option>
-                    </select>
-                </label>
-                <label>
-                    <span>Start:</span>
-                    <select id="start-node-select"></select>
-                </label>
-                <label>
-                    <span>End (optional):</span>
-                    <select id="end-node-select"></select>
-                </label>
-                <label>
-                    <span>Delay (ms):</span>
-                    <input id="delay-input" min="0" step="5" type="number" value="5">
-                </label>
-                <div class="button-group">
-                    <button class="primary" id="step-traversal-btn" title="step">⏭</button>
-                    <button class="primary" id="run-traversal-btn" title="play">▶</button>
-                    <button class="primary" id="stop-traversal-btn" title="stop">⏹</button>
-                    <button class="danger" id="clear-traversal-btn" title="clear">C</button>
-                </div>
-                <div id="traversal-output" title="Traversal output will appear here."></div>
-            </dd>
-        </dl>
-        <dl id="transport">
-            <dt>Transport</dt>
-            <dd>
-                <div class="button-group">
-                    <button id="export-btn">Export</button>
-                    <button id="import-btn">Import</button>
-                </div>
-                <textarea id="json-area" placeholder="Exported graph JSON appears here. Paste graph JSON here to import."></textarea>
-            </dd>
-        </dl>
-        <nav>
-            <button data-target="compose" type="button"></button>
-            <button data-target="traverse" type="button"></button>
-            <button data-target="transport" type="button"></button>
-        </nav>
-    </aside>
-    <main id="graph-editor">
-        <header>
-            <ul id="interaction-help">
-                <li>Single click node/edge = edit</li>
-                <li>Double click node/edge = delete</li>
-                <li>Drag node = move</li>
-                <li>Alt+drag = pan</li>
-                <li>Wheel = zoom</li>
-            </ul>
-            <div class="hide-scrollbar" id="legend">
-                <label data-text="Node"><span></span></label>
-                <label data-text="Selected"><span></span></label>
-                <label data-text="Pending"><span></span></label>
-                <label data-text="Explored"><span></span></label>
-                <label data-text="Path/MST"><span></span></label>
-            </div>
-        </header>
-        <canvas></canvas>
-        <footer id="graph-status">status</footer>
-    </main>
+                <p class="graph-status" title="status">status </p>
+
+            </header>
+            <canvas></canvas>
+            <footer class="graph-status">status</footer>
+        </main>
+    </div>
     <footer>
         <section><span id="copyright-year"></span>Daniel Tongu</section>
         <section>
@@ -183,7 +199,7 @@
             <a href="https://github.com/danielTongu">GitHub</a>
             <a href="https://www.discord.com/">Discord</a>
         </section>
-        <a href="#">Back to top ↑</a>
+        <a href="#">Back to top <span>&uarr;</span></a>
     </footer>
 </div>
 <script src="./index.js"></script>
