@@ -2778,9 +2778,7 @@ class Graph extends EventEmitter {
     }
 }
 
-// ---------------------------------------------------------------------
-//---------------------- TRAVERSAL -------------------------------------
-// ---------------------------------------------------------------------
+// ---------------------------------------------------------------------------------
 
 /**
  * Formats traversal results and applies the final path / tree visual state.
@@ -4609,6 +4607,8 @@ class Prim extends Traversal {
         return this.treeNodes ? this.treeNodes.size : 0;
     }
 }
+
+// ---------------------------------------------------------------------------------
 
 /**
  * Graph compose mode management.
@@ -6952,11 +6952,6 @@ class App extends EventEmitter {
 }
 
 /**
- * Application startup and initialization module.
- * Handles DOM ready event and bootstraps the graph editor application.
- */
-
-/**
  * Performance monitoring utility for development.
  * Tracks frame rates and operation timing.
  */
@@ -7181,7 +7176,7 @@ class ErrorBoundary {
     }
 }
 
-
+// ---------------------------------------------------------------------------------
 
 /**
  * Start the application after the DOM is ready.
@@ -7281,30 +7276,3 @@ document.addEventListener("visibilitychange", function handleVisibility() {
         }
     }
 });
-
-// Export classes for module usage (if using modules)
-if (typeof module !== "undefined" && module.exports) {
-    module.exports = {
-        EventEmitter,
-        TypeAssert,
-        RenderState,
-        Geometry,
-        Node,
-        Edge,
-        Deque,
-        Graph,
-        TraversalResult,
-        MinPriorityQueue,
-        Traversal,
-        BreadthFirst,
-        DepthFirst,
-        ShortestPathTraversal,
-        Dijkstra,
-        BellmanFord,
-        Prim,
-        ModeOptions,
-        App,
-        PerformanceMonitor,
-        ErrorBoundary
-    };
-}
