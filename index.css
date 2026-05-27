@@ -309,6 +309,12 @@ button.warn {
     background: var(--panel-secondary);
     border-radius: var(--space-xl);
     border: 2px solid var(--muted);
+    font-size: small;
+}
+
+#graph-editor [data-action]:after {
+    content: " = " attr(data-action);
+    font-weight: bold;
 }
 
 #graph-editor > header > section {
@@ -316,13 +322,12 @@ button.warn {
     grid-template-columns: minmax(0, 1fr) max-content;
     align-items: center;
     gap: var(--space-lg);
-    margin: var(--space-sm) 0;
 }
 
 #zoom-controls {
     display: grid;
     grid-template-columns: repeat(3, max-content);
-    gap: var(--space-sm);
+    gap: var(--space-md);
 }
 #zoom-controls > button {
     position: relative;
@@ -342,7 +347,7 @@ button.warn {
 #zoom-in-btn::after {
     content: "";
     width: 1em;
-    border-top: 2px solid currentColor;
+    border-top: 4px solid currentColor;
 }
 
 #zoom-in-btn::after {
@@ -350,7 +355,8 @@ button.warn {
 }
 
 #zoom-reset-btn::before {
-    content: "R";
+    content: "1";
+    font-size: 1.5em;
 }
 
 #zoom-controls > button#zoom-in-btn::after {
