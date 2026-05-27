@@ -66,7 +66,7 @@
                         </label>
                         <label>
                             <span>Node Radius:</span>
-                            <input id="default-node-radius-input" min="1" step="1" type="number" value="20">
+                            <input id="default-node-radius-input" min="1" step="1" type="number" value="16">
                         </label>
                     </section>
                     <section hidden id="panel-add-edge">
@@ -163,30 +163,28 @@
         </aside>
         <main id="graph-editor">
             <header>
-                <ul id="interaction-help">
-                    <li>Single click node/edge = edit</li>
-                    <li>Double click node/edge = delete</li>
-                    <li>Drag node = move</li>
-                    <li>Alt+drag = pan</li>
-                    <li>Wheel = zoom</li>
-                    <li>Click { - / R / + } = zoom</li>
-                </ul>
-                <section>
-                    <div class="hide-scrollbar" id="legend" title="Legend">
-                        <label data-text="Node"><span></span></label>
-                        <label data-text="Selected"><span></span></label>
-                        <label data-text="Exploring"><span></span></label>
-                        <label data-text="Explored"><span></span></label>
-                        <label data-text="Path/MST"><span></span></label>
-                    </div>
-                    <div id="zoom-controls">
+                <section title="controls">
+                    <ul id="interaction-help">
+                        <li data-action="EDIT">single-click node / edge</li>
+                        <li data-action="DELETE">double-click node / edge</li>
+                        <li data-action="MOVE">drag node</li>
+                        <li data-action="PAN">alt+drag</li>
+                        <li data-action="ZOOM">wheel / buttons { - / 1 / + }</li>
+                    </ul>
+                    <div id="zoom-controls" title="zoom">
                         <button class="primary" id="zoom-out-btn" type="button"></button>
-                        <button class="primary" id="zoom-reset-btn" type="button" title="Reset zoom"></button>
+                        <button class="primary" id="zoom-reset-btn" type="button" title="reset"></button>
                         <button class="primary" id="zoom-in-btn" type="button"></button>
                     </div>
                 </section>
+                <div class="hide-scrollbar" id="legend" title="Legend">
+                    <label data-text="Node"><span></span></label>
+                    <label data-text="Selected"><span></span></label>
+                    <label data-text="Exploring"><span></span></label>
+                    <label data-text="Explored"><span></span></label>
+                    <label data-text="Path/MST"><span></span></label>
+                </div>
                 <p class="graph-status" title="status">status </p>
-
             </header>
             <canvas></canvas>
             <footer class="graph-status">status</footer>
