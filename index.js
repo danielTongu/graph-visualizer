@@ -4934,7 +4934,7 @@ class App extends EventEmitter {
         function get(id)  {
             const el = document.getElementById(id);
             if (!el) {
-                onsole.warn(`Element #${id} not found`);
+                console.warn(`Element #${id} not found`);
             }
             return el;
         };
@@ -5158,22 +5158,30 @@ class App extends EventEmitter {
 
     /**
      * Draw the full graph editor scene.
-     * Clears canvas, draws grid, then renders edges and nodes.
+     * Clears the full backing buffer, draws grid, then renders edges and nodes.
      */
     draw() {
-        if (!this.#ctx) return;
+        if (!this.#ctx) {return; }
 
-        const width = this.#elements.canvas.clientWidth;
-        const height = this.#elements.canvas.clientHeight;
+        const canvas = this.#elements.canvas;
+        const dpr = window.devicePixelRatio || 1;
+        const width = canvas.clientWidth;
+        const height = canvas.clientHeight;
         const viewport = this.#uiState.viewport;
 
-        this.#ctx.clearRect(0, 0, width, height);
-
-        // Draw grid (cached when viewport is stable)
-        this.#drawGrid(width, height);
-        this.#viewportChanged = false;
-
         this.#ctx.save();
+
+        // Clear the actual backing store, not the CSS-sized canvas.
+        this.#ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.#ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Paint an opaque background so transparent old/composited pixels cannot show through.
+        this.#ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        this.#ctx.fillStyle = "#020617";
+        this.#ctx.fillRect(0, 0, width, height);
+
+        this.#drawGrid(width, height);
+
         this.#ctx.translate(viewport.x, viewport.y);
         this.#ctx.scale(viewport.scale, viewport.scale);
 
