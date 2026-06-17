@@ -498,7 +498,7 @@ footer.graph-status {
     #workspace {
         grid-template-columns: 300px minmax(0, 1fr);
         align-items: stretch;
-        height: 70vh;
+        max-height: 100vh;
     }
 
     #workspace > aside,
