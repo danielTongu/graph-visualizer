@@ -4,6 +4,8 @@
 
 Graph Visualizer is a browser-based application for building, editing, traversing, and visualizing graphs in real time.
 
+**Live demo:** https://danielTongu.github.io/graph-visualizer/
+
 It focuses on:
 
 - deterministic traversal behavior
@@ -530,11 +532,11 @@ Shared traversal behavior is centralized in `Traversal` and `ShortestPathTravers
 ## Clone Repository
 
 ```bash
-git clone https://github.com/danielTongu/graph-app.git
+git clone https://github.com/danielTongu/graph-visualizer.git
 ```
 ## Enter Project
 ```bash
-cd graph-app
+cd graph-visualizer
 ```
 ## Start Local Server
 ```bash
