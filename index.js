@@ -4763,15 +4763,13 @@ class App extends EventEmitter {
         this.resizeCanvas();
         this.refreshNodeSelectors();
         this.syncControls();
-        this.#setStatus("Ready. Click or double-click on the canvas to add nodes.");
+        this.#setStatus("Ready. Choose Add Node and click the canvas, or load the sample graph.");
         this.draw();
 
         // Listen for graph changes
         this.graph.on("graph-changed", () => this.draw());
         this.graph.on("graph-loaded", () => this.#resetAfterGraphLoad());
-        this.graph.on("history-changed", (data) => {
-            this.#setStatus(`Undo: ${data.undoCount}, Redo: ${data.redoCount}`);
-        });
+        this.graph.on("history-changed", () => this.#syncHistoryControls());
     }
 
     /**
@@ -5029,6 +5027,7 @@ class App extends EventEmitter {
         this.#elements.sampleGraphBtn.addEventListener("click", this.loadSampleGraph.bind(this));
 
         // Traversal controls
+        this.#elements.algorithmSelect.addEventListener("change", this.#syncAlgorithmGuidance.bind(this));
         this.#elements.runTraversalBtn.addEventListener("click", this.runTraversal.bind(this));
         this.#elements.stepTraversalBtn.addEventListener("click", this.stepTraversal.bind(this));
         this.#elements.clearTraversalBtn.addEventListener("click", this.clearTraversal.bind(this));
@@ -5059,6 +5058,19 @@ class App extends EventEmitter {
         this._resizeObserver.observe(this.#elements.canvas);
         window.addEventListener("resize", this._boundResize);
 
+        document.querySelectorAll("[data-mode]").forEach(button => {
+            button.addEventListener("click", () => {
+                this.#cancelEdgeSource();
+                this.#clearEditSelectionState();
+                this.#setMode(button.dataset.mode);
+                this.draw();
+            });
+        });
+        document.getElementById("undo-btn").addEventListener("click", this.undoGraphChange.bind(this));
+        document.getElementById("redo-btn").addEventListener("click", this.redoGraphChange.bind(this));
+        document.getElementById("empty-sample-btn").addEventListener("click", this.loadSampleGraph.bind(this));
+        document.getElementById("fit-graph-btn").addEventListener("click", this.fitGraph.bind(this));
+        document.getElementById("delete-selection-btn").addEventListener("click", this.deleteSelection.bind(this));
         this.#enhanceAccessibility();
     }
 
@@ -5084,23 +5096,9 @@ class App extends EventEmitter {
         // Add keyboard shortcut for delete
         canvas.addEventListener("keydown", (event) => {
             if (event.key === "Delete" || event.key === "Backspace") {
-                const selection = this.#uiState.editSelection;
-                if (selection) {
+                if (this.#uiState.editSelection) {
                     event.preventDefault();
-                    if (selection.type === "node") {
-                        this.graph.removeNode(selection.id);
-                        this.#clearEditSelectionState();
-                        this.refreshNodeSelectors();
-                        this.clearTraversal();
-                        this.#setStatus("Node deleted.");
-                        this.draw();
-                    } else if (selection.type === "edge") {
-                        this.graph.removeEdge(selection.id);
-                        this.#clearEditSelectionState();
-                        this.clearTraversal();
-                        this.#setStatus("Edge deleted.");
-                        this.draw();
-                    }
+                    this.deleteSelection();
                 }
             }
         });
@@ -5116,7 +5114,12 @@ class App extends EventEmitter {
         const key = event.key.toLowerCase();
         const modifierPressed = event.ctrlKey || event.metaKey;
 
-        if (modifierPressed && key === "z" && !event.shiftKey) {
+        const editingText = event.target instanceof HTMLElement &&
+            (event.target.matches("input, textarea, select") || event.target.isContentEditable);
+
+        if (editingText) {
+            // Leave text editing shortcuts to the focused form control.
+        } else if (modifierPressed && key === "z" && !event.shiftKey) {
             event.preventDefault();
             this.undoGraphChange();
         } else if ((modifierPressed && key === "y") || (modifierPressed && event.shiftKey && key === "z")) {
@@ -5190,6 +5193,14 @@ class App extends EventEmitter {
 
         this.#ctx.restore();
 
+        this.#elements.zoomResetBtn.textContent = `${Math.round(viewport.scale * 100)}%`;
+        this.#syncHistoryControls();
+        document.getElementById("canvas-empty-state").hidden = this.graph.nodeCount > 0;
+        document.getElementById("canvas-guidance").textContent = this.#uiState.mode === "add-node"
+            ? "Click anywhere on the canvas to place your first node, or explore a ready-made example."
+            : "Choose Add Node to place your first node, or explore a ready-made example.";
+        document.getElementById("graph-counts").textContent = `${this.graph.nodeCount} nodes · ${this.graph.edgeCount} edges`;
+        this.#elements.canvas.style.cursor = this.#uiState.mode === "edit" ? "default" : "crosshair";
         this.emit("draw-complete");
     }
 
@@ -5275,12 +5286,40 @@ class App extends EventEmitter {
     }
 
     /**
+     * Keep visible history actions aligned with the available graph snapshots.
+     */
+    #syncHistoryControls() {
+        document.getElementById("undo-btn").disabled = this.graph.undoCount === 0;
+        document.getElementById("redo-btn").disabled = this.graph.redoCount === 0;
+    }
+
+    /**
+     * Explain the selected algorithm's purpose and graph constraints beside its controls.
+     */
+    #syncAlgorithmGuidance() {
+        const descriptions = {
+            BFS: "Explore reachable nodes layer by layer. Finds shortest paths by number of edges, ignoring weights.",
+            DFS: "Explore each branch before backtracking. Traversal order does not guarantee a shortest path.",
+            Prim: "Connect the start node’s component with a minimum spanning tree. Requires an undirected graph.",
+            Dijkstra: "Find shortest paths using nonnegative edge costs. Negative weights are not supported.",
+            "Bellman-Ford": "Find shortest paths with negative-weight support and reachable negative-cycle detection. Negative weights require a directed graph."
+        };
+        const algorithm = this.#elements.algorithmSelect.value;
+        document.getElementById("algorithm-help").textContent = descriptions[algorithm];
+        this.#elements.endNodeSelect.disabled = algorithm === "Prim";
+        document.getElementById("target-node-help").textContent = algorithm === "Prim"
+            ? "A spanning tree uses the start node; no target is needed."
+            : "Leave empty to explore from the start node.";
+    }
+
+    /**
      * Synchronize visible controls with the current graph and UI state.
      */
     syncControls() {
         this.#syncModePanels();
         this.#syncComposeControls();
         this.#syncEditControls();
+        this.#syncAlgorithmGuidance();
     }
 
     /**
@@ -5309,6 +5348,9 @@ class App extends EventEmitter {
      */
     #syncModePanels() {
         const currentMode = this.#uiState.mode;
+        document.querySelectorAll("[data-mode]").forEach(button => {
+            button.setAttribute("aria-pressed", String(button.dataset.mode === currentMode));
+        });
 
         ModeOptions.values(this.#elements.modeSelect).forEach(mode => {
             const panel = document.getElementById(ModeOptions.getPanelId(mode));
@@ -5347,6 +5389,18 @@ class App extends EventEmitter {
         const hasNode = selection && selection.type === "node";
         const hasEdge = selection && selection.type === "edge";
 
+        document.getElementById("selection-inspector").hidden = !(hasNode || hasEdge);
+        document.getElementById("selection-heading").textContent = hasNode
+            ? "Selected node" : hasEdge ? "Selected edge" : "Selection properties";
+        if (hasNode) {
+            document.getElementById("selection-identity").textContent = this.graph.getNodeById(selection.id).label;
+        } else if (hasEdge) {
+            document.getElementById("selection-identity").textContent =
+                `${selection.fromLabel} ${this.graph.directed ? "→" : "—"} ${selection.toLabel}`;
+        } else {
+            document.getElementById("selection-identity").textContent = "";
+        }
+
         if (this.#elements.editEmptyHelp) {
             this.#elements.editEmptyHelp.hidden = hasNode || hasEdge;
         }
@@ -5367,6 +5421,43 @@ class App extends EventEmitter {
         if (hasEdge) {
             this.#syncEdgeEditControls(selection);
         }
+        document.getElementById("selection-delete-help").textContent = hasNode
+            ? "Also removes connected edges." : "Removes this connection.";
+        this.#syncSelectionDraft();
+    }
+
+    /**
+     * Explain draft validity and enable Apply only when valid selection values changed.
+     */
+    #syncSelectionDraft() {
+        const selection = this.#uiState.editSelection;
+        let changed = false;
+        let message = "No changes yet";
+        let valid = true;
+
+        if (selection && selection.type === "node") {
+            const node = this.graph.getNodeById(selection.id);
+            valid = Boolean(selection.label.trim()) &&
+                this.#elements.editNodeRadiusInput.validity.valid;
+            changed = Boolean(node) && (selection.label.trim() !== node.label || selection.radius !== node.radius);
+            if (!valid) {
+                message = "Enter a label and a radius from 5 to 200, or leave radius blank.";
+            }
+        } else if (selection && selection.type === "edge" && this.graph.weighted) {
+            const edge = this.graph.getEdgeById(selection.id);
+            valid = this.#elements.editEdgeWeightInput.validity.valid;
+            changed = Boolean(edge) && selection.weight !== edge.weight;
+            if (!valid) {
+                message = "Enter a weight between −1,000,000 and 1,000,000.";
+            }
+        }
+        if (valid && changed) {
+            message = "Unsaved changes";
+        }
+        this.#elements.applyEditBtn.disabled = !valid || !changed;
+        document.getElementById("selection-draft-status").textContent = message;
+        document.getElementById("selection-draft-status").dataset.state =
+            !valid ? "invalid" : changed ? "changed" : "unchanged";
     }
 
     /**
@@ -5574,23 +5665,24 @@ class App extends EventEmitter {
     }
 
     /**
-     * Handle double-click deletion of a node or edge.
-     * Nodes take priority over edges when both are under the pointer.
-     *
-     * @param {MouseEvent} event - Mouse event.
+     * Ignore double-clicks so repeated clicks cannot delete graph data.
      */
-    handleCanvasDoubleClick(event) {
-        this.#uiState.suppressNextClick = true;
+    handleCanvasDoubleClick() {
+        this.#uiState.suppressNextClick = false;
+    }
 
-        const point = this.#getPointer(event);
-        const node = this.graph.findNodeAt(point.x, point.y);
-        const edge = node ? null : this.graph.findEdgeAt(point.x, point.y);
-
-        if (node || edge) {
-            this.#deleteEntity(node, edge);
+    /**
+     * Delete the selected entity using the existing graph and history workflow.
+     */
+    deleteSelection() {
+        const selection = this.#uiState.editSelection;
+        if (selection) {
+            this.#deleteEntity(
+                selection.type === "node" ? this.graph.getNodeById(selection.id) : null,
+                selection.type === "edge" ? this.graph.getEdgeById(selection.id) : null
+            );
+            this.draw();
         }
-
-        this.draw();
     }
 
     /**
@@ -5646,8 +5738,6 @@ class App extends EventEmitter {
             this.#handleEmptyCanvasClick(point);
         } else if (this.#uiState.mode === "add-edge" && node) {
             this.#handleAddEdgeMode(node);
-        } else if (this.#isCurrentEditNode(node)) {
-            this.#startEdgeFromSelectedNode(node);
         } else {
             this.#setMode("edit");
             this.#handleEditMode(node, edge);
@@ -5655,33 +5745,21 @@ class App extends EventEmitter {
     }
 
     /**
-     * Check whether the clicked node is the currently selected edit node.
-     *
-     * @param {Node|null} node - Clicked node.
-     * @returns {boolean} True when the clicked node matches the current edit selection.
-     */
-    #isCurrentEditNode(node) {
-        const selection = this.#uiState.editSelection;
-        return Boolean(node && selection && selection.type === "node" && selection.id === node.id);
-    }
-
-    /**
      * Handle an empty canvas click.
-     * The first empty click exits the current non-add-node mode.
-     * The next empty click adds a node.
+     * Add nodes only in Add Node mode; otherwise clear the selection without switching tools.
      *
      * @param {Object} point - Pointer position.
      */
     #handleEmptyCanvasClick(point) {
-        if (this.#uiState.mode !== "add-node") {
-            this.#setMode("add-node");
-            this.#cancelEdgeSource();
-            this.#clearEditSelectionState();
-            this.#setStatus("<Add Node> Click to place a node.");
-        } else {
+        if (this.#uiState.mode === "add-node") {
             this.graph.addNode(point.x, point.y, this.#createNodeLabel());
             this.refreshNodeSelectors();
             this.#setStatus("Node added.");
+        } else {
+            this.#cancelEdgeSource();
+            this.#clearEditSelectionState();
+            this.syncControls();
+            this.#setStatus("Selection cleared. Choose Add Node to place a node.");
         }
     }
 
@@ -5695,16 +5773,6 @@ class App extends EventEmitter {
             return App.numberToLetters(this.graph.nodeOrder.length + 1);
         }
         return null;
-    }
-
-    /**
-     * Switch to add-edge mode using the selected node as the edge source.
-     *
-     * @param {Node} node - Source node.
-     */
-    #startEdgeFromSelectedNode(node) {
-        this.#setMode("add-edge");
-        this.#selectEdgeSource(node);
     }
 
     /**
@@ -5880,6 +5948,7 @@ class App extends EventEmitter {
         const selection = this.#uiState.editSelection;
         if (selection && selection.type === "node") {
             selection.label = this.#elements.editNodeLabelInput.value;
+            this.#syncSelectionDraft();
         }
     }
 
@@ -5892,6 +5961,7 @@ class App extends EventEmitter {
         if (selection && selection.type === "node") {
             const value = this.#elements.editNodeRadiusInput.value.trim();
             selection.radius = value === "" ? null : Number(value);
+            this.#syncSelectionDraft();
         }
     }
 
@@ -5902,8 +5972,9 @@ class App extends EventEmitter {
         const selection = this.#uiState.editSelection;
         const parsed = Number(this.#elements.editEdgeWeightInput.value);
 
-        if (selection && selection.type === "edge" && Number.isFinite(parsed)) {
+        if (selection && selection.type === "edge") {
             selection.weight = parsed;
+            this.#syncSelectionDraft();
         }
     }
 
@@ -6252,6 +6323,37 @@ class App extends EventEmitter {
     zoomOut() {
         this.#zoomCanvasCenter(App.ZOOM_OUT_FACTOR);
         this.#setStatus(`Zoom: ${Math.round(this.#uiState.viewport.scale * 100)}%`);
+    }
+
+    /**
+     * Center all node bounds in the canvas with padding while respecting zoom limits.
+     */
+    fitGraph() {
+        const nodes = this.graph.getNodes();
+        if (nodes.length > 0) {
+            let left = Infinity;
+            let right = -Infinity;
+            let top = Infinity;
+            let bottom = -Infinity;
+            for (const node of nodes) {
+                left = Math.min(left, node.x - node.getRadius());
+                right = Math.max(right, node.x + node.getRadius());
+                top = Math.min(top, node.y - node.getRadius());
+                bottom = Math.max(bottom, node.y + node.getRadius());
+            }
+            const canvas = this.#elements.canvas;
+            const viewport = this.#uiState.viewport;
+            viewport.scale = Math.max(App.MIN_ZOOM, Math.min(App.MAX_ZOOM,
+                (canvas.clientWidth - 80) / (right - left),
+                (canvas.clientHeight - 80) / (bottom - top)));
+            viewport.x = canvas.clientWidth / 2 - (left + right) / 2 * viewport.scale;
+            viewport.y = canvas.clientHeight / 2 - (top + bottom) / 2 * viewport.scale;
+            this.#viewportChanged = true;
+            this.draw();
+            this.#setStatus("Graph fitted to view.");
+        } else {
+            this.#setStatus("Add nodes or load a graph before fitting the view.");
+        }
     }
 
     /**
@@ -6869,6 +6971,7 @@ class App extends EventEmitter {
 
         try {
             btn.disabled = true;
+            document.getElementById("empty-sample-btn").disabled = true;
             btn.textContent = "Loading...";
             this.#setStatus("Loading sample graph...");
 
@@ -6881,6 +6984,7 @@ class App extends EventEmitter {
             this.#setStatus(`Failed to load sample: ${error.message}`);
         } finally {
             btn.disabled = false;
+            document.getElementById("empty-sample-btn").disabled = false;
             btn.textContent = originalText;
         }
     }

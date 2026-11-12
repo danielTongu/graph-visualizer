@@ -17,166 +17,183 @@
 </head>
 <body>
 <div class="hide-scrollbar" id="app">
-    <header>
-        <h1>Interactive Graph Algorithm Visualizer</h1>
-        <p>Build, edit, and visualize graphs in the browser with features including:</p>
-        <ul id="features">
-            <li>visual node and edge editing</li>
-            <li>directed and weighted graph support</li>
-            <li>BFS and DFS traversal animation</li>
-            <li>Dijkstra and Bellman-Ford, shortest path visualization</li>
-            <li>Prim’s minimum spanning tree visualization</li>
-            <li>manual step-by-step traversal</li>
-            <li>pan and zoom</li>
-            <li>local saves, import/export, undo, and redo</li>
-        </ul>
+    <header class="app-header">
+        <div><p class="eyebrow">GRAPH THEORY / INTERACTIVE LAB</p><h1>Graph Visualizer<span>.</span></h1></div>
+        <details class="help-menu"><summary>Quick guide</summary><div>
+            <p>Choose Add Node to place nodes. Choose Add Edge, then click two nodes to connect them.</p>
+            <p>Select a node or edge to edit its properties. Drag nodes to move them; Alt + drag pans the canvas.</p>
+            <p>Use Ctrl/Cmd + Z to undo, Shift + Ctrl/Cmd + Z to redo, and Delete to remove a selection.</p>
+            <p>Load the sample graph to explore an algorithm, then use Run or Step. Save retains one graph in this browser; Export puts JSON in the Import / Export panel.</p>
+        </div></details>
     </header>
     <div id="workspace">
         <aside class="hide-scrollbar">
             <dl id="compose">
-                <dt>Compose</dt>
+                <dt><span class="panel-kicker">WORKSPACE</span>Graph settings<small>Shape your graph and edit its elements.</small></dt>
                 <dd id="graph-options">
                     <label>
-                        <span>Directed:</span>
+                        <span>Directed<small>One-way connections</small></span>
                         <input id="directed-toggle" type="checkbox">
                     </label>
                     <label>
-                        <span>Weighted:</span>
+                        <span>Weighted<small>Assign connection costs</small></span>
                         <input id="weighted-toggle" type="checkbox">
                     </label>
                 </dd>
                 <dd id="graph-mode">
                     <label>
-                        <span>Mode:</span>
+                        <span>Editing tool</span>
                         <select>
                             <option value="add-node">Add Node</option>
                             <option value="add-edge">Add Edge</option>
-                            <option value="edit">Edit</option>
+                            <option value="edit">Select</option>
                         </select>
                     </label>
                 </dd>
                 <dd id="mode-panel">
-                    <section id="panel-add-node">
+                    <section id="panel-add-node" class="tool-settings"><h3>New node</h3>
                         <label>
-                            <span>Node Label Style:</span>
+                            <span>Label style</span>
                             <select id="node-label-mode-select">
                                 <option value="numeric">Numeric: 1, 2, 3</option>
                                 <option value="alphabetic">Alphabetic: A, B, C</option>
                             </select>
                         </label>
                         <label>
-                            <span>Node Radius:</span>
-                            <input id="default-node-radius-input" min="1" step="1" type="number" value="16">
+                            <span>Default radius <span class="field-unit">px</span></span>
+                            <input id="default-node-radius-input" min="5" max="200" step="1" type="number" value="17" aria-describedby="default-radius-help">
+                            <small id="default-radius-help">5–200 px. Used by nodes without a custom radius.</small>
                         </label>
                     </section>
-                    <section hidden id="panel-add-edge">
+                    <section hidden id="panel-add-edge" class="tool-settings"><h3>New edge</h3>
                         <label hidden id="edge-weight-row">
-                            <span>Edge Weight:</span>
-                            <input id="edge-weight-input" step="any" type="number" value="1">
+                            <span>Connection weight</span>
+                            <input id="edge-weight-input" min="-1000000" max="1000000" step="any" type="number" value="1">
                         </label>
                         <small>Click source node, then destination node.</small>
                     </section>
                     <section hidden id="panel-edit">
-                        <small id="edit-empty-help">Click node or edge to edit, then apply.</small>
-                        <div hidden id="node-edit-controls">
-                            <label>
-                                <span>Node Label:</span>
-                                <input id="edit-node-label-input" type="text">
-                            </label>
-                            <label>
-                                <span>Node Radius:</span>
-                                <input id="edit-node-radius-input" min="1" step="1" type="number">
-                            </label>
-                        </div>
-                        <div hidden id="edge-edit-controls">
-                            <label id="edit-edge-weight-row">
-                                <span>Edge Weight:</span>
-                                <input id="edit-edge-weight-input" step="any" type="number">
-                            </label>
-                            <small hidden id="edge-unweighted-help">Weighted mode is off, weight fixed at 1.</small>
-                        </div>
-                        <div class="button-group" hidden id="edit-buttons">
-                            <button class="success" id="apply-edit-btn">Apply</button>
-                            <button class="primary" id="clear-edit-selection-btn">Cancel</button>
+                        <small id="edit-empty-help" class="panel-callout">Select a node or edge on the canvas to open its properties.</small>
+                        <div id="selection-inspector" hidden role="group" aria-labelledby="selection-heading">
+                            <header class="selection-header">
+                                <div><h3 id="selection-heading">Selection properties</h3><p id="selection-identity"></p></div>
+                                <button id="clear-edit-selection-btn" type="button" aria-label="Deselect entity" title="Deselect">×</button>
+                            </header>
+                            <div class="selection-body">
+                                <div hidden id="node-edit-controls">
+                                    <label>
+                                        <span>Display label</span>
+                                        <input id="edit-node-label-input" type="text" required aria-describedby="node-label-help">
+                                        <small id="node-label-help">The name shown on the canvas.</small>
+                                    </label>
+                                    <label>
+                                        <span>Radius <span class="field-unit">px</span></span>
+                                        <input id="edit-node-radius-input" min="5" max="200" step="any" type="number" aria-describedby="node-radius-help">
+                                        <small id="node-radius-help">5–200 px. Leave blank to use the default.</small>
+                                    </label>
+                                </div>
+                                <div hidden id="edge-edit-controls">
+                                    <label id="edit-edge-weight-row">
+                                        <span>Weight</span>
+                                        <input id="edit-edge-weight-input" min="-1000000" max="1000000" step="any" type="number" required aria-describedby="edge-weight-help">
+                                        <small id="edge-weight-help">Cost used by weighted algorithms.</small>
+                                    </label>
+                                    <small hidden id="edge-unweighted-help">This edge has a fixed cost of 1. Enable Weighted to edit its cost.</small>
+                                </div>
+                                <p id="selection-draft-status" role="status">No changes yet</p>
+                            </div>
+                            <div hidden id="edit-buttons" class="selection-actions">
+                                <button class="selection-primary" id="apply-edit-btn" type="button" disabled>Apply changes</button>
+                                <div class="selection-delete-row"><span id="selection-delete-help">Removes this selection.</span><button class="selection-action" id="delete-selection-btn" type="button" aria-describedby="selection-delete-help">Delete</button></div>
+                            </div>
                         </div>
                     </section>
                 </dd>
-                <dd class="button-group">
-                    <button class="danger" id="clear-graph-btn" title="clear">C</button>
-                    <button class="primary" id="save-local-btn" title="memorize">M+</button>
-                    <button class="success" id="load-local-btn" title="remember">MR</button>
+                <dd class="panel-section graph-storage">
+                    <h3>Browser storage</h3>
+                    <p class="section-help">Keep one saved graph in this browser.</p>
+                    <div class="button-group">
+                        <button id="save-local-btn" type="button" title="Save graph in this browser">Save graph</button>
+                        <button id="load-local-btn" type="button" title="Replace graph with browser save">Load saved</button>
+                    </div>
+                    <button id="sample-graph-btn" type="button">Load sample graph</button>
+                    <small>Loading replaces the canvas and resets undo history.</small>
                 </dd>
-                <dd>
-                    <button id="sample-graph-btn">Load Sample Graph</button>
+                <dd class="panel-section destructive-row">
+                    <span>Start with an empty canvas<small>Clears the graph and undo history.</small></span>
+                    <button class="danger" id="clear-graph-btn" type="button">Clear</button>
                 </dd>
             </dl>
             <dl id="traverse">
-                <dt>Traverse</dt>
+                <dt><span class="panel-kicker">EXPLORE</span>Algorithm<small>Watch each step or advance at your pace.</small></dt>
                 <dd>
                     <label>
-                        <span>Algorithm:</span>
-                        <select id="algorithm-select">
-                            <option value="BFS">BFS</option>
-                            <option value="DFS">DFS</option>
-                            <option value="Prim">MST (Prim)</option>
-                            <option value="Dijkstra">Path (Dijkstra)</option>
-                            <option value="Bellman-Ford">Path (Bellman-Ford)</option>
+                        <span>Algorithm</span>
+                        <select id="algorithm-select" aria-describedby="algorithm-help">
+                            <option value="BFS">Breadth-first search</option>
+                            <option value="DFS">Depth-first search</option>
+                            <option value="Prim">Prim · Minimum spanning tree</option>
+                            <option value="Dijkstra">Dijkstra · Shortest path</option>
+                            <option value="Bellman-Ford">Bellman-Ford · Shortest path</option>
                         </select>
                     </label>
-                    <label>
-                        <span>Start:</span>
-                        <select id="start-node-select"></select>
-                    </label>
-                    <label>
-                        <span>End (optional):</span>
-                        <select id="end-node-select"></select>
-                    </label>
-                    <label>
-                        <span>Delay (ms):</span>
-                        <input id="delay-input" min="0" step="5" type="number" value="5">
-                    </label>
-                    <div class="button-group">
-                        <button class="primary" id="step-traversal-btn" title="Step traversal" type="button">⤷</button>
-                        <button class="success" id="run-traversal-btn" title="Play traversal" type="button">▶</button>
-                        <button class="danger" id="stop-traversal-btn" title="Stop traversal" type="button">■</button>
-                        <button class="warn" id="clear-traversal-btn" title="Clear traversal" type="button">×</button>
+                    <p id="algorithm-help" class="panel-callout">Explores reachable nodes layer by layer.</p>
+                </dd>
+                <dd class="panel-section">
+                    <h3>Route</h3>
+                    <label><span>Start node</span><select id="start-node-select"></select></label>
+                    <label><span>Target node <span class="field-unit">optional</span></span><select id="end-node-select" aria-describedby="target-node-help"></select><small id="target-node-help">Leave empty to explore from the start node.</small></label>
+                </dd>
+                <dd class="panel-section">
+                    <h3>Playback</h3>
+                    <label><span>Step delay <span class="field-unit">ms</span></span><input id="delay-input" min="0" step="5" type="number" value="5" aria-describedby="delay-help"><small id="delay-help">Higher values slow the animation. Use 0 for full speed.</small></label>
+                    <div class="playback-actions">
+                        <button class="success" id="run-traversal-btn" type="button">Run algorithm</button>
+                        <button id="step-traversal-btn" type="button">Step</button>
+                        <button id="stop-traversal-btn" type="button">Stop</button>
+                        <button id="clear-traversal-btn" type="button">Reset</button>
                     </div>
-                    <div id="traversal-output" title="Traversal output will appear here."></div>
+                    <small class="playback-help">Stop pauses playback. Step continues; Reset clears the visualization.</small>
                 </dd>
             </dl>
             <dl id="transport">
-                <dt>Transport</dt>
+                <dt><span class="panel-kicker">TRANSFER</span>Import / Export<small>Move graphs between sessions with JSON.</small></dt>
                 <dd>
-                    <div class="button-group">
-                        <button id="export-btn">Export</button>
-                        <button id="import-btn">Import</button>
-                    </div>
-                    <textarea id="json-area"
-                              placeholder="Exported graph JSON appears here. Paste graph JSON here to import."></textarea>
+                    <label for="json-area">Graph JSON</label>
+                    <textarea id="json-area" spellcheck="false" aria-describedby="json-help" placeholder='Paste graph JSON here, or select Export JSON to fill this field.'></textarea>
+                    <small id="json-help">Export fills this field with the current graph. Copy the JSON to keep a separate backup.</small>
+                </dd>
+                <dd class="transfer-actions">
+                    <button id="export-btn" type="button">Export JSON</button>
+                    <button class="primary" id="import-btn" type="button">Import JSON</button>
+                    <p class="panel-callout">Import replaces the canvas and resets undo history.</p>
                 </dd>
             </dl>
             <nav>
-                <button data-target="compose" type="button"></button>
-                <button data-target="traverse" type="button"></button>
-                <button data-target="transport" type="button"></button>
+                <button data-target="compose" type="button">Properties</button>
+                <button data-target="traverse" type="button">Algorithm</button>
+                <button data-target="transport" type="button">Import / Export</button>
             </nav>
         </aside>
         <main id="graph-editor">
             <header>
-                <section title="controls">
-                    <ul id="interaction-help">
-                        <li data-action="EDIT">single-click node / edge</li>
-                        <li data-action="DELETE">double-click node / edge</li>
-                        <li data-action="MOVE">drag node</li>
-                        <li data-action="PAN">alt+drag</li>
-                        <li data-action="ZOOM">wheel / buttons { - / 1 / + }</li>
-                    </ul>
-                    <div id="zoom-controls" title="zoom">
-                        <button class="primary" id="zoom-out-btn" type="button"></button>
-                        <button class="primary" id="zoom-reset-btn" type="button" title="reset"></button>
-                        <button class="primary" id="zoom-in-btn" type="button"></button>
+                <div class="canvas-toolbar">
+                    <div class="tool-group" role="group" aria-label="Editing tool">
+                        <button data-mode="edit" type="button">Select</button>
+                        <button data-mode="add-node" type="button">Add Node</button>
+                        <button data-mode="add-edge" type="button">Add Edge</button>
                     </div>
-                </section>
+                    <div class="history-tools" role="group" aria-label="Edit history">
+                        <button id="undo-btn" type="button" title="Undo (Ctrl/Cmd + Z)" disabled>↶ Undo</button>
+                        <button id="redo-btn" type="button" title="Redo (Ctrl/Cmd + Shift + Z)" disabled>↷ Redo</button>
+                    </div>
+                    <div id="zoom-controls" role="group" aria-label="Canvas view">
+                        <button id="fit-graph-btn" type="button">Fit graph</button>
+                        <button id="zoom-out-btn" type="button" aria-label="Zoom out">−</button>
+                        <button id="zoom-reset-btn" type="button" title="Reset zoom and pan">100%</button>
+                        <button id="zoom-in-btn" type="button" aria-label="Zoom in">+</button>
+                    </div>
+                </div>
                 <div class="hide-scrollbar" id="legend" title="Legend">
                     <label data-text="Node"><span></span></label>
                     <label data-text="Selected"><span></span></label>
@@ -184,10 +201,23 @@
                     <label data-text="Explored"><span></span></label>
                     <label data-text="Path/MST"><span></span></label>
                 </div>
-                <p class="graph-status" title="status">status </p>
+
             </header>
-            <canvas></canvas>
-            <footer class="graph-status">status</footer>
+            <div class="canvas-stage">
+                <canvas aria-describedby="canvas-guidance"></canvas>
+                <div id="canvas-empty-state" class="canvas-empty-state">
+                    <span class="empty-symbol" aria-hidden="true">◉ — ◉</span>
+                    <h2>Your graph starts here</h2>
+                    <p id="canvas-guidance">Click anywhere on the canvas to place your first node,<br>or explore a ready-made example.</p>
+                    <button id="empty-sample-btn" class="primary" type="button">Explore sample graph</button>
+                </div>
+            </div>
+            <div class="canvas-caption"><span>Drag nodes to move · Alt + drag to pan · Scroll to zoom</span><span id="graph-counts">0 nodes · 0 edges</span></div>
+            <section class="results-panel" aria-labelledby="results-heading">
+                <h2 id="results-heading">Results <span>Algorithm playback</span></h2>
+                <div id="traversal-output" role="log" aria-live="polite">Choose an algorithm, then Run or Step to begin.</div>
+            </section>
+            <footer class="graph-status" role="status" aria-live="polite">Ready. Add a node or load the sample graph.</footer>
         </main>
     </div>
     <footer>
@@ -195,7 +225,7 @@
         <section>
             <a href="https://linkedin.com/in/danielTongu">LinkedIn</a>
             <a href="https://github.com/danielTongu">GitHub</a>
-            <a href="https://www.discord.com/">Discord</a>
+
         </section>
         <a href="#">Back to top <span>&uarr;</span></a>
     </footer>

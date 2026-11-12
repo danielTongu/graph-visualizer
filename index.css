@@ -1,532 +1,908 @@
+/* Shared palette and control sizing for the graph workspace. */
 :root {
-    --white: #ffffff;
-    --accent: #38bdf8;
-    --warning: #f59e0b;
-    --selected: #8b5cf6;
-    --success: #5cb85c;
-    --danger: #ef4444;
-    --muted: #94a3b8;
-    --panel-secondary: #1f2937;
-    --panel-primary: #111827;
-    --muted-strong: #334155;
-    --accent-dark: #082f49;
-    --warning-dark: #451a03;
-    --success-dark: #052e16;
+    color-scheme: dark;
+    --white: #e5edf5;
+    --muted: #9eafc3;
+    --accent: #5eead4;
+    --selected: #c084fc;
+    --selected-fill: #4c1d95;
+    --success: #4ade80;
+    --danger: #f87171;
+    --warning: #fbbf24;
     --canvas: #020617;
-
-    --space-xs: 4px;
-    --space-sm: 6px;
-    --space-md: 10px;
-    --space-lg: 12px;
-    --space-xl: 14px;
-    --space-2xl: 20px;
-
-    --radius-pill: 999px;
-    --control-padding: var(--space-md) var(--space-lg);
+    --panel-primary: #101c2c;
+    --panel-secondary: #142235;
+    --muted-strong: #2a3b50;
 }
 
 * {
+    box-sizing: border-box;
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
 }
 
 [hidden] {
     display: none !important;
 }
 
-body,
-.hide-scrollbar {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-}
-
-body::-webkit-scrollbar,
-.hide-scrollbar::-webkit-scrollbar {
-    display: none;
+body {
+    background: #0a1220;
+    color: var(--white);
+    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 a {
-    color: inherit;
+    color: var(--muted);
     text-decoration: none;
 }
 
 a:hover {
     color: var(--accent);
-    text-decoration: underline;
 }
 
-body {
-    min-height: 100vh;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-    line-height: 1.4;
-}
-
-#app {
-    display: grid;
-    grid-template-rows: auto auto auto;
-    gap: var(--space-2xl);
-    min-height: 100vh;
-    padding: var(--space-2xl);
-    background: var(--panel-primary);
-    color: var(--muted);
-}
-
-/* Page header */
-
-#app > header :not(h1) {
-    font-size: small;
-    color: var(--muted);
-}
-
-h1 {
-    color: var(--white);
-    font-size: clamp(27px, 3vw, 40px);
-    letter-spacing: -0.04em;
-}
-
-ul#features::after,
-ul#interaction-help::after {
-    content: "";
-    display: block;
-    clear: both;
-}
-
-ul#features > li,
-ul#interaction-help > li {
-    float: left;
-    margin: 0 var(--space-md) 0 var(--space-2xl);
-}
-
-/* Shared workspace */
-
-#workspace {
-    display: grid;
-    gap: var(--space-2xl);
-    min-height: 0;
-    border-top: 7px solid black;
-    border-bottom: 7px solid black;
-    padding: var(--space-2xl) 0;
-}
-
-#workspace > aside,
-#workspace > main {
-    min-height: 0;
-}
-
-/* Sidebar */
-
-aside {
-    position: relative;
-    scroll-behavior: smooth;
-    scroll-snap-type: x mandatory;
-    overflow-x: auto;
-    overflow-y: hidden;
-    width: 100%;
-    white-space: nowrap;
-    border-radius: var(--space-xl);
-    border: 2px solid var(--muted);
-}
-
-aside > dl {
-    scroll-snap-align: start;
-    display: inline-block;
-    width: 300px;
-    vertical-align: top;
-    white-space: normal;
-    border: 3px solid var(--canvas);
-    border-radius: var(--space-lg);
-    background: var(--muted-strong);
-    padding: var(--space-xl);
-}
-
-aside > dl + dl {
-    margin-left: var(--space-2xl);
-}
-
-aside nav {
-    position: sticky;
-    left: 0;
-    bottom: 0;
-    z-index: 2;
-    width: 100%;
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: max-content;
-    justify-content: center;
-    gap: var(--space-lg);
-    margin: var(--space-xl) 0;
-    border-radius: var(--space-xl);
-}
-
-aside nav > button {
-    width: 48px;
-    padding: 0;
-    border: 10px solid var(--muted);
-    border-radius: var(--radius-pill);
-}
-
-dt {
-    color: var(--white);
-    margin-bottom: var(--space-lg);
-    border-bottom: 1px solid var(--muted);
-    font-weight: 700;
-    font-size: x-large;
-}
-
-dd + dd {
-    margin-top: 16px;
-}
-
-label,
-#graph-options {
-    display: grid;
-    gap: var(--space-sm);
-    min-width: 0;
-    margin-bottom: var(--space-lg);
-    color: var(--muted);
-    font-size: small;
-}
-
-label > span {
-    color: var(--white);
-}
-
-small,
-#interaction-help {
-    color: var(--accent);
-    font-size: small;
-}
-
-/* Form controls */
-
-input,
-select,
-textarea,
-button {
-    display: block;
-    width: 100%;
-    min-width: 0;
-    max-width: 100%;
-    border: 1px solid var(--muted-strong);
-    border-radius: var(--space-md);
-    background: var(--canvas);
-    color: var(--white);
-    padding: var(--control-padding);
+button, input, select, textarea, summary {
     font: inherit;
 }
 
+button, input, select, textarea {
+    border: 1px solid var(--muted-strong);
+    border-radius: 7px;
+    color: var(--white);
+    background: #0b1625;
+    padding: 9px 11px;
+    min-width: 0;
+}
+
+button {
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 150ms, border-color 150ms;
+}
+
+button:hover {
+    background: #21364b;
+    border-color: #61778e;
+}
+
+button:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+}
+
+button.success {
+    background: #5eead4;
+    border-color: #5eead4;
+    color: #07342e;
+}
+
+button.success:hover {
+    background: #99f6e4;
+}
+
+button.primary {
+    color: var(--accent);
+}
+
+button.danger {
+    color: #fda4af;
+    border-color: #673343;
+    background: #2b1d2a;
+}
+
+/* Match the selected node and edge stroke/fill palette. */
+button.selection-action {
+    color: var(--selected);
+    border-color: var(--selected);
+    background: transparent;
+}
+
+button.selection-action:hover {
+    color: var(--selected-fill);
+    background: var(--selected);
+}
+
+button.warn {
+    color: var(--warning);
+}
+
+input, select, textarea {
+    width: 100%;
+}
+
 input[type="checkbox"] {
-    width: auto;
+    width: 17px;
+    height: 17px;
     accent-color: var(--accent);
 }
 
 textarea {
-    margin-top: var(--space-md);
-    min-height: 350px;
+    min-height: 220px;
     resize: vertical;
+    margin-top: 12px;
+    font: 12px/1.6 ui-monospace, monospace;
 }
 
-button {
-    display: initial;
-    cursor: pointer;
-    border: 0;
+#app {
+    max-width: 1920px;
+    margin: auto;
+    padding: 20px 24px 12px;
+}
+
+.app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 18px;
+}
+
+.eyebrow {
+    color: var(--muted);
+    font-size: 10px;
+    letter-spacing: .18em;
     font-weight: 700;
-    background: var(--muted);
-    color: var(--muted-strong);
-    transition:
-            transform 0.15s ease,
-            opacity 0.15s ease,
-            background 0.15s ease;
 }
 
-button:hover {
-    transform: translateY(-1px);
-    opacity: 0.92;
+h1 {
+    font-size: 27px;
+    letter-spacing: -.04em;
+    font-weight: 650;
 }
 
-button:active {
-    transform: translateY(0);
+h1 span {
+    color: var(--accent);
 }
 
-button.primary {
-    background: var(--accent);
-    color: var(--accent-dark);
+.help-menu {
+    position: relative;
 }
 
-button.success {
-    background: var(--success);
-    color: var(--success-dark);
+summary {
+    color: var(--muted);
+    cursor: pointer;
+    border: 1px solid var(--muted-strong);
+    border-radius: 7px;
+    padding: 8px 14px;
 }
 
-button.danger {
-    background: var(--danger);
-    color: var(--white);
+.help-menu > div {
+    position: absolute;
+    top: 46px;
+    right: 0;
+    z-index: 10;
+    width: min(360px, 85vw);
+    padding: 20px;
+    background: var(--panel-secondary);
+    border: 1px solid var(--muted-strong);
+    border-radius: 10px;
+    box-shadow: 0 12px 35px #0008;
 }
 
-button.warn {
-    background: var(--warning);
-    color: var(--warning-dark);
+.help-menu p + p {
+    margin-top: 12px;
 }
 
-.button-group,
+/* Canvas comes first visually; the inspector remains in normal reading order. */
+#workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 16px;
+    align-items: start;
+}
+
+/* Let main determine the row height; sidebar content scrolls within that height. */
+#workspace > aside {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: stretch;
+    contain: size;
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+    scrollbar-width: thin;
+    border-radius: 13px;
+    border-top: 1px solid var(--muted-strong);
+    border-bottom: 1px solid var(--muted-strong);
+}
+
+aside > dl {
+    overflow: hidden;
+    padding: 16px;
+    border: 1px solid var(--muted-strong);
+    border-radius: 12px;
+    background: var(--panel-primary);
+}
+
+aside > dl:not(:last-of-type) {
+    margin-bottom: 2rem;
+}
+
+dt {
+    font-size: 14px;
+    font-weight: 650;
+    margin-bottom: 18px;
+}
+
+dd + dd {
+    margin-top: 14px;
+}
+
+label {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 12px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+small {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.button-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.button-group > button {
+    flex: 1 1 auto;
+}
+
+#sample-graph-btn {
+    width: 100%;
+    color: var(--accent);
+}
+
 #graph-options {
     display: grid;
-    gap: var(--space-lg);
-    grid-template-columns: repeat(auto-fit, minmax(44px, 1fr));
+    gap: 8px;
 }
 
-/* Compose panel */
-
-#compose > dd:first-of-type label:has(input[type="checkbox"]) {
-    grid-template-columns: auto auto;
+#graph-options label {
+    display: flex;
+    justify-content: space-between;
     align-items: center;
-    justify-content: center;
-    margin-bottom: var(--space-lg);
+    gap: 12px;
+    margin: 0;
+    padding: 11px 12px;
+    border: 1px solid var(--muted-strong);
+    border-radius: 8px;
+    background: #0c1726;
 }
 
-/* Traverse panel */
-
-#traversal-output {
-    display: block;
-    min-height: 85px;
-    margin-top: var(--space-lg);
-    padding: var(--space-xs) var(--space-md);
-    color: var(--muted);
-    background: var(--panel-primary);
-    border-radius: var(--space-md);
-    font-size: small;
+#graph-options label:has(input:checked) {
+    border-color: #33756e;
+    background: #102c30;
 }
 
-/* Graph editor */
+#graph-options label > span {
+    color: var(--white);
+    font-weight: 550;
+}
+
+#graph-options small {
+    margin-top: 2px;
+    font-size: 10px;
+    font-weight: 400;
+}
+
+#graph-options input {
+    flex-shrink: 0;
+}
+
+aside nav {
+    display: none;
+}
 
 #graph-editor {
-    display: grid;
-    grid-template-rows: auto 1fr auto;
+    grid-column: 1;
+    grid-row: 1;
     min-width: 0;
+    border: 1px solid var(--muted-strong);
+    border-radius: 12px;
     overflow: hidden;
-    padding: var(--space-xl);
-    background: var(--panel-secondary);
-    border-radius: var(--space-xl);
-    border: 2px solid var(--muted);
-    font-size: small;
+    background: var(--panel-primary);
 }
 
-#graph-editor [data-action]:after {
-    content: " = " attr(data-action);
-    font-weight: bold;
+.canvas-toolbar {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 14px;
 }
 
-#graph-editor > header > section {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) max-content;
+.tool-group, #zoom-controls {
+    display: flex;
+    gap: 4px;
     align-items: center;
-    gap: var(--space-lg);
 }
 
-#zoom-controls {
-    display: grid;
-    grid-template-columns: repeat(3, max-content);
-    gap: var(--space-md);
-}
-#zoom-controls > button {
-    position: relative;
-    padding: 1rem;
+.tool-group {
+    padding: 3px;
+    background: #081321;
+    border: 1px solid var(--muted-strong);
+    border-radius: 9px;
 }
 
-#zoom-controls > button::before,
-#zoom-controls > button::after {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+.tool-group button {
+    border-color: transparent;
+    background: transparent;
+    font-size: 12px;
 }
 
-#zoom-out-btn::before,
-#zoom-in-btn::before,
-#zoom-in-btn::after {
-    content: "";
-    width: 1em;
-    border-top: 4px solid currentColor;
+.tool-group button[aria-pressed="true"] {
+    background: #193e40;
+    color: #99f6e4;
+    border-color: #2d6964;
 }
 
-#zoom-in-btn::after {
-    transform: translate(-50%, -50%) rotate(90deg);
+#zoom-controls button {
+    font-size: 12px;
+    padding: 8px 10px;
 }
 
-#zoom-reset-btn::before {
-    content: "1";
-    font-size: 1.5em;
-}
-
-#zoom-controls > button#zoom-in-btn::after {
-    transform: translate(-50%, -50%) rotate(90deg);
+#zoom-reset-btn {
+    min-width: 65px;
+    font-variant-numeric: tabular-nums;
 }
 
 #legend {
-    display: grid;
-    gap: var(--space-lg);
-    grid-auto-flow: column;
-    grid-auto-columns: max-content;
-    align-items: center;
-    overflow-x: auto;
-    background: var(--panel-primary);
-    border: 1px solid var(--muted-strong);
-    border-radius: var(--space-xl);
-    margin: var(--space-sm) 0;
-    font-size: x-small;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    padding: 0 17px 12px;
 }
 
-#legend > label {
-    grid-template-columns: auto auto;
+#legend label {
+    display: flex;
+    flex-direction: row-reverse;
     align-items: center;
-    justify-content: start;
+    gap: 6px;
     margin: 0;
-    background: var(--panel-primary);
-    padding: var(--space-xs) var(--space-md);
+    font-size: 10px;
 }
 
-#legend > label > span {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
+#legend label::before {
+    content: attr(data-text);
+}
+
+#legend span {
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
-    vertical-align: middle;
+    background: #64748b;
 }
 
-#legend > label[data-text]::before {
-    content: attr(data-text) ":";
-    display: inline-block;
-}
-
-#legend > label[data-text="Node"] > span {
-    background: var(--white);
-}
-
-#legend > label[data-text="Selected"] > span {
+#legend [data-text="Selected"] span {
     background: var(--selected);
 }
 
-#legend > label[data-text="Exploring"] > span,
-#legend > label[data-text="exploring"] > span {
-    background: var(--warning);
+#legend [data-text="Exploring"] span {
+    background: #166534;
 }
 
-#legend > label[data-text="Explored"] > span {
+#legend [data-text="Explored"] span {
     background: var(--success);
 }
 
-#legend > label[data-text="Path/MST"] > span {
+#legend [data-text="Path/MST"] span {
     background: var(--danger);
 }
 
 canvas {
-    touch-action: none;
     display: block;
     width: 100%;
-    height: 65vh;
-    min-width: 0;
-    min-height: 0;
-    padding: 0;
-    border-radius: var(--space-xl);
-    border: 3px solid var(--muted-strong);
+    height: clamp(360px, calc(100dvh - 325px), 1000px);
+    touch-action: none;
     background: var(--canvas);
-    cursor: crosshair;
+    border-block: 1px solid var(--muted-strong);
 }
 
 canvas.panning {
     cursor: grabbing;
-    border-color: var(--accent);
+}
+
+.canvas-caption {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 16px;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+#graph-counts {
+    font-variant-numeric: tabular-nums;
+}
+
+.results-panel {
+    border-top: 1px solid var(--muted-strong);
+    padding: 14px 16px;
+}
+
+h2 {
+    font-size: 12px;
+    font-weight: 650;
+}
+
+h2 span {
+    margin-left: 10px;
+    font-weight: 400;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+#traversal-output {
+    color: #bfcedd;
+    padding-top: 8px;
+    max-height: 180px;
+    overflow: auto;
+    overflow-wrap: anywhere;
+    font-size: 12px;
+}
+
+#traversal-output hr {
+    border: 0;
+    margin: 8px 0;
 }
 
 .graph-status {
-    display: block;
-    color: var(--muted);
-    border-radius: var(--space-md);
-    font-size: small;
-    font-style: italic;
+    padding: 10px 16px;
+    border-top: 1px solid var(--muted-strong);
+    color: var(--accent);
+    font-size: 12px;
+    overflow-wrap: anywhere;
+    background: #0d202a;
 }
-
-p.graph-status {
-    margin-top: var(--space-lg);
-}
-
-footer.graph-status {
-    text-align: center;
-}
-
-/* Page footer */
 
 #app > footer {
-    text-align: center;
-    font-size: small;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px 0 0;
+    color: var(--muted);
+    font-size: 11px;
 }
 
-#app > footer [href="#"] {
-    display: block;
-    padding-top: var(--space-xl);
-    font-weight: bold;
-    color: var(--accent);
-}
-
-#app > footer a + a::before {
-    content: "|";
-    display: inline-block;
-    margin: 0 var(--space-sm);
-}
-
-#copyright-year {
-    margin: 0 var(--space-sm);
+#app > footer section {
+    display: flex;
+    gap: 14px;
 }
 
 #copyright-year::before {
-    content: "\00a9";
-    display: inline-block;
+    content: "© ";
 }
 
-#app > footer section + section {
-    margin-top: var(--space-xl);
-}
-
-/* Desktop layout */
-
-@media (min-width: 950px) {
+/* Stack the workspace without hiding controls on smaller screens. */
+@media (max-width: 900px) {
     #app {
-        grid-template-rows: auto 1fr auto;
+        padding: 14px;
     }
 
     #workspace {
-        grid-template-columns: 300px minmax(0, 1fr);
-        align-items: stretch;
-        max-height: 100vh;
+        grid-template-columns: 1fr;
     }
 
-    #workspace > aside,
-    #workspace > main {
-        height: 100%;
-    }
-
-    aside {
-        overflow-y: auto;
-        overflow-x: hidden;
-        white-space: normal;
+    #workspace > aside {
+        grid-column: 1;
+        grid-row: 2;
+        contain: none;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
     }
 
     aside > dl {
-        display: block;
-        width: 100%;
+        margin: 0;
     }
 
-    aside > dl + dl {
-        margin-left: 0;
-        margin-top: var(--space-2xl);
-    }
-
-    aside nav {
-        display: none;
+    #transport {
+        grid-column: 1 / -1;
     }
 
     canvas {
-        height: 100%;
+        height: 52dvh;
+        min-height: 320px;
     }
+}
+
+@media (max-width: 540px) {
+    #app {
+        padding: 10px;
+    }
+
+    h1 {
+        font-size: 23px;
+    }
+
+    .eyebrow {
+        font-size: 8px;
+    }
+
+    #workspace > aside {
+        grid-template-columns: 1fr;
+    }
+
+    #zoom-controls {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .canvas-caption {
+        font-size: 10px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        scroll-behavior: auto !important;
+        transition: none !important;
+    }
+}
+
+/* A shared selection accent connects the inspector to its canvas entity. */
+#selection-inspector {
+    border: 1px solid #7950a2;
+    border-radius: 10px;
+    background: #151a2b;
+    overflow: hidden;
+}
+
+.selection-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 15px;
+    background: #261e3c;
+    border-bottom: 1px solid #50366d;
+}
+
+.selection-header > div {
+    min-width: 0;
+}
+
+#selection-heading {
+    color: var(--selected);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+}
+
+#selection-inspector #selection-identity {
+    margin-top: 5px;
+    font-size: 19px;
+    line-height: 1.3;
+}
+
+#clear-edit-selection-btn {
+    flex: 0 0 28px;
+    padding: 0;
+    height: 28px;
+    border-color: #654381;
+    color: #ddbeff;
+    background: transparent;
+    font-size: 20px;
+    line-height: 1;
+}
+
+.selection-body {
+    padding: 16px 15px 12px;
+}
+
+#selection-inspector label {
+    margin-bottom: 16px;
+    gap: 7px;
+}
+
+#selection-inspector label > span {
+    display: flex;
+    justify-content: space-between;
+    color: #ddbeff;
+    font-weight: 550;
+}
+
+.field-unit {
+    color: var(--muted);
+    font-weight: 400;
+}
+
+#selection-inspector input {
+    border-color: #61447f;
+    background: #101525;
+}
+
+#selection-inspector input:hover {
+    border-color: var(--selected);
+}
+
+#selection-inspector :focus-visible {
+    outline-color: var(--selected);
+}
+
+#selection-inspector small {
+    font-size: 10px;
+    font-weight: 400;
+    line-height: 1.5;
+}
+
+#selection-draft-status {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+#selection-draft-status[data-state="changed"] {
+    color: var(--selected);
+}
+
+#selection-draft-status[data-state="invalid"] {
+    color: #fda4af;
+}
+
+.selection-actions {
+    padding: 0 15px;
+}
+
+button.selection-primary {
+    width: 100%;
+    color: #25123c;
+    background: var(--selected);
+    border-color: var(--selected);
+}
+
+button.selection-primary:hover {
+    background: #d8b4fe;
+    border-color: #d8b4fe;
+}
+
+.selection-delete-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 13px 0;
+    margin-top: 15px;
+    border-top: 1px solid #3b304e;
+}
+
+#selection-delete-help {
+    font-size: 10px;
+    color: var(--muted);
+}
+
+#delete-selection-btn {
+    flex: 0 0 auto;
+    font-size: 11px;
+    padding: 6px 12px;
+}
+
+/* Keep history discoverable and first-use guidance inside the drawing surface. */
+.history-tools {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+.history-tools button {
+    font-size: 12px;
+    padding: 8px 10px;
+}
+
+.canvas-stage {
+    position: relative;
+    min-width: 0;
+}
+
+.canvas-empty-state {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    text-align: center;
+    padding: 24px;
+    pointer-events: none;
+}
+
+.canvas-empty-state h2 {
+    font-size: 20px;
+    letter-spacing: -.03em;
+}
+
+.canvas-empty-state p {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.canvas-empty-state button {
+    pointer-events: auto;
+    margin-top: 6px;
+}
+
+.empty-symbol {
+    color: var(--accent);
+    font-size: 28px;
+    letter-spacing: .15em;
+}
+
+#selection-identity {
+    color: var(--white);
+    font-size: 17px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+    margin-top: 6px;
+}
+
+@media (max-width: 540px) {
+    .canvas-toolbar {
+        gap: 8px;
+    }
+
+    .history-tools {
+        margin-left: auto;
+    }
+}
+
+/* Consistent headers, field groups, and action hierarchy across the sidebar. */
+aside dt {
+    margin: -16px -16px 16px;
+    padding: 15px 16px;
+    border-bottom: 1px solid var(--muted-strong);
+    background: #142135;
+    font-size: 15px;
+}
+
+.panel-kicker {
+    display: block;
+    color: var(--accent);
+    font-size: 9px;
+    letter-spacing: .13em;
+    margin-bottom: 5px;
+}
+
+aside dt > small {
+    margin-top: 4px;
+    font-size: 11px;
+    font-weight: 400;
+}
+
+aside label > span {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+aside label small, .graph-storage > small, #json-help, .playback-help {
+    font-size: 10px;
+    line-height: 1.6;
+}
+
+.panel-section {
+    padding-top: 16px;
+    border-top: 1px solid var(--muted-strong);
+}
+
+aside h3 {
+    font-size: 11px;
+    font-weight: 650;
+    margin-bottom: 12px;
+}
+
+.tool-settings {
+    padding: 13px;
+    background: #0c1726;
+    border: 1px solid var(--muted-strong);
+    border-radius: 8px;
+}
+
+.tool-settings label:last-child {
+    margin-bottom: 0;
+}
+
+.section-help {
+    color: var(--muted);
+    font-size: 11px;
+    margin: -6px 0 12px;
+}
+
+.panel-callout {
+    color: var(--muted);
+    background: #0b1727;
+    border-left: 2px solid #397b7b;
+    padding: 10px 11px;
+    border-radius: 0 6px 6px 0;
+    font-size: 11px;
+    line-height: 1.6;
+}
+
+.graph-storage .button-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+}
+
+.graph-storage button {
+    font-size: 11px;
+}
+
+#sample-graph-btn {
+    margin: 9px 0;
+    background: transparent;
+    border-style: dashed;
+}
+
+.destructive-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.destructive-row > span {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.destructive-row small {
+    font-size: 10px;
+    margin-top: 3px;
+}
+
+.destructive-row button {
+    padding: 6px 12px;
+    font-size: 11px;
+}
+
+.playback-actions {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 7px;
+}
+
+#run-traversal-btn {
+    grid-column: 1 / -1;
+}
+
+.playback-actions button {
+    font-size: 11px;
+}
+
+.playback-help {
+    display: block;
+    margin-top: 10px;
+}
+
+#json-area {
+    min-height: 190px;
+    margin: 0 0 8px;
+    tab-size: 2;
+}
+
+.transfer-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.transfer-actions button {
+    font-size: 11px;
+}
+
+.transfer-actions .panel-callout {
+    grid-column: 1 / -1;
+    margin-top: 3px;
 }
